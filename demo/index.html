@@ -43,20 +43,52 @@
     .aspect-9-16 { aspect-ratio: 9/16; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Overlay arrows styling */
+    .nav-overlay {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 12px;
+      border-radius: 9999px;
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+      color: white;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 20;
+    }
+
+    .has-multiple #cardPreview:hover .nav-overlay {
+      opacity: 0.7;
+    }
+
+    .has-multiple #cardPreview:hover .nav-overlay:hover {
+      opacity: 1;
+    }
+
+    .has-multiple .nav-overlay.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .has-multiple .nav-overlay {
+      display: block !important;
+    }
   </style>
 </head>
 
 <body class="bg-gray-100 flex flex-col">
 
   <!-- Preview Area -->
-  <main class="flex-1 flex flex-col items-center justify-center p-8 pb-24">
-    <div id="cardPreview" class="relative max-w-lg w-full bg-white rounded-3xl shadow-2xl overflow-hidden aspect-3-4 border-4 border-transparent">
+  <main class="flex-1 flex flex-col items-center justify-center p-8 pb-20">
+    <div id="cardPreview" class="relative max-w-lg w-full bg-white rounded-3xl shadow-2xl overflow-hidden aspect-3-4 border-4 border-transparent group">
       <div id="bgLayer" class="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-600"></div>
       <div class="absolute inset-0 bg-white/10 backdrop-blur-[4px]"></div>
 
       <div class="relative z-10 flex flex-col justify-center items-center h-full px-8 py-12 text-center">
         <h1 id="previewTitle" class="font-bold leading-tight font-elegant text-white">
-          FlashCard Maker
+          Offline FlashCard Maker
         </h1>
         <p id="previewContent" class="mt-6 font-medium leading-relaxed font-display text-white">
           Simply enter your Title and Content, choose your color, font, and background, then click Download—you’re done!
@@ -66,48 +98,59 @@
       <div id="watermark" class="absolute bottom-4 left-4 opacity-50 hidden">
         <span class="text-lg font-bold text-white">@henry</span>
       </div>
-    </div>
 
-    <!-- Download Button -->
-    <button id="downloadBtn" class="mt-8 w-16 h-16 bg-white/90 backdrop-blur rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition">
-      <span class="material-symbols-outlined text-4xl text-primary">download</span>
-    </button>
+      <!-- Overlay Navigation Arrows -->
+      <button id="prevOverlay" class="nav-overlay left-4 disabled:opacity-30">
+        <span class="material-symbols-outlined text-5xl">chevron_left</span>
+      </button>
+      <button id="nextOverlay" class="nav-overlay right-4 disabled:opacity-30">
+        <span class="material-symbols-outlined text-5xl">chevron_right</span>
+      </button>
+
+      <!-- Download Button in bottom-right corner -->
+      <button id="downloadBtn" class="absolute bottom-5 right-5 z-30 w-16 h-16 bg-white/90 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition">
+        <span class="material-symbols-outlined text-4xl text-primary">download</span>
+      </button>
+    </div>
   </main>
 
-  <!-- FAB Menu -->
-  <div class="fixed bottom-6 right-6 z-40">
-    <div class="flex flex-col items-center gap-3">
-      <div id="fabMenu" class="flex flex-col-reverse gap-3 mb-3 transition-all duration-300 opacity-0 scale-95 pointer-events-none">
-        <button data-action="edit" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">edit_note</span>
-        </button>
-		<button data-action="aspect" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">aspect_ratio</span>
-        </button>
-		<button data-action="bgColor" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">format_color_fill</span>
-        </button>
-        <button data-action="font" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">text_fields</span>
-        </button>
-        <button data-action="textColor" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">palette</span>
-        </button>
-        <button data-action="textShadow" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">format_color_text</span>
-        </button>
+  <!-- Bottom Toolbar -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-lg border-t border-gray-200/50 shadow-2xl">
+    <div class="max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
+	
+	   <button data-action="aspect" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">aspect_ratio</span>
+        <span class="text-xs font-medium">Ratio</span>
+      </button>
+	  
+      <button data-action="edit" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">edit_note</span>
+        <span class="text-xs font-medium">Edit</span>
+      </button>
 
-        <button data-action="border" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">border_outer</span>
-        </button>
+      <button data-action="font" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">text_fields</span>
+        <span class="text-xs font-medium">Font</span>
+      </button>
 
-        <button data-action="addCard" class="w-14 h-14 bg-white/90 backdrop-blur rounded-full shadow-xl flex items-center justify-center hover:scale-110">
-          <span class="material-symbols-outlined text-2xl">add_card</span>
-        </button>
-      </div>
+      <button data-action="textColor" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">palette</span>
+        <span class="text-xs font-medium">Color</span>
+      </button>
 
-      <button id="mainFab" class="w-16 h-16 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95">
-        <span id="fabIcon" class="material-symbols-outlined text-4xl">add</span>
+      <button data-action="bgColor" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">format_color_fill</span>
+        <span class="text-xs font-medium">BG</span>
+      </button>
+
+      <button data-action="border" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">border_outer</span>
+        <span class="text-xs font-medium">Border</span>
+      </button>
+
+         <button data-action="addCard" class="flex flex-col items-center gap-1 text-primary hover:text-blue-700 active:scale-95 transition">
+        <span class="material-symbols-outlined text-2xl">add_card</span>
+        <span class="text-xs font-medium">New</span>
       </button>
     </div>
   </div>
@@ -125,12 +168,11 @@
   <div id="editSheet" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end">
     <div class="w-full bg-white rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto">
       <div class="flex justify-between mb-6">
-        <h2 class="text-2xl font-bold">Add Text</h2>
-        <button id="closeEdit" class="w-10 h-10 rounded-full hover:bg-gray-100">X</button>
+        <h2 class="text-2xl font-bold"></h2>
+        <button id="closeEdit" class="w-10 h-10 rounded-full hover:bg-gray-100">Ok</button>
       </div>
-      <input id="title" type="text" value="Offline Flash Card Generator" class="w-full px-4 py-3 rounded-xl bg-gray-100 mb-4 text-xl" placeholder="Title" />
-      <textarea id="content" rows="5" class="w-full px-4 py-3 rounded-xl bg-gray-100 mb-4" placeholder="Content">
-The process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water.</textarea>
+      <input id="title" type="text" class="w-full px-4 py-3 rounded-xl bg-gray-100 mb-4 text-xl" placeholder="Title" />
+      <textarea id="content" rows="5" class="w-full px-4 py-3 rounded-xl bg-gray-100 mb-4" placeholder="Content"></textarea>
       <input id="watermarkText" type="text" placeholder="Watermark (optional)" class="w-full px-4 py-3 rounded-xl bg-gray-100" />
     </div>
   </div>
@@ -138,7 +180,7 @@ The process by which green plants and some other organisms use sunlight to synth
   <script>
     // Card Data
     let cards = [{
-      title: "Flash Card Maker",
+      title: "FlashCard Maker",
       content: "Simply enter your Title and Content, choose your color, font, and background, then click Download—you’re done!",
       watermark: "",
       font: "elegant",
@@ -163,21 +205,19 @@ The process by which green plants and some other organisms use sunlight to synth
     const contentInput = document.getElementById('content');
     const watermarkInput = document.getElementById('watermarkText');
 
-    const mainFab = document.getElementById('mainFab');
-    const fabIcon = document.getElementById('fabIcon');
-    const fabMenu = document.getElementById('fabMenu');
-
     const pickerOverlay = document.getElementById('pickerOverlay');
     const pickerContent = document.getElementById('pickerContent');
 
-    let isOpen = false;
+    const prevOverlay = document.getElementById('prevOverlay');
+    const nextOverlay = document.getElementById('nextOverlay');
+    const downloadBtn = document.getElementById('downloadBtn');
 
-    // Options
+    // Options (same as before)
     const fonts = [
-      { class: "elegant", label: "Playfair Display" },
-      { class: "serif", label: "Merriweather" },
+      { class: "elegant", label: "PlayFair" },
+      { class: "serif", label: "MW" },
       { class: "display", label: "Inter" },
-      { class: "mono", label: "Roboto Mono" }
+      { class: "mono", label: "Roboto" }
     ];
 
     const textColors = [
@@ -185,13 +225,6 @@ The process by which green plants and some other organisms use sunlight to synth
       "#ff0f44", "#ff6f00", "#ffd000", "#00ff85", "#00ffff",
       "#0066ff", "#8a2be2", "#ff33cc", "#ec4899", "#f59e0b",
       "#10b981", "#3b82f6", "#8b5cf6", "#84cc16", "#fb7185"
-    ];
-
-    const shadows = [
-      { value: "none", label: "Off" },
-      { value: "light", label: "Light" },
-      { value: "medium", label: "Medium" },
-      { value: "strong", label: "Strong" }
     ];
 
     const backgroundOptions = [
@@ -219,7 +252,7 @@ The process by which green plants and some other organisms use sunlight to synth
       { width: "0", label: "None" },
       { width: "4", label: "Thin" },
       { width: "8", label: "Medium" },
-      
+      { width: "16", label: "Thick" }
     ];
 
     const aspects = [
@@ -245,8 +278,8 @@ The process by which green plants and some other organisms use sunlight to synth
     // Update Preview
     function updatePreview() {
       const c = cards[currentCardIndex];
-      previewTitle.textContent = c.title || 'Title';
-      previewContent.textContent = c.content || 'Content';
+      previewTitle.textContent = c.title || '';
+      previewContent.textContent = c.content || '';
 
       previewTitle.className = `font-bold leading-tight font-${c.font} ${getTitleSize(c.aspect)}`;
       previewContent.className = `mt-6 font-medium leading-relaxed font-${c.font} ${getContentSize(c.aspect)}`;
@@ -268,7 +301,6 @@ The process by which green plants and some other organisms use sunlight to synth
 
       bgLayer.className = `absolute inset-0 bg-gradient-to-br ${c.bg}`;
 
-      // Fixed class management
       cardPreview.classList.remove('aspect-1-1', 'aspect-3-4', 'aspect-16-9', 'aspect-9-16');
       cardPreview.classList.remove('border-0', 'border-4', 'border-8', 'border-16', 'border-solid');
 
@@ -281,6 +313,20 @@ The process by which green plants and some other organisms use sunlight to synth
       }
 
       cardPreview.style.borderColor = c.borderColor;
+
+      // Update UI state (arrows visibility)
+      updateUIState();
+    }
+
+    // Update UI State (arrows show only with 2+ cards)
+    function updateUIState() {
+      const hasMultiple = cards.length > 1;
+      cardPreview.classList.toggle('has-multiple', hasMultiple);
+
+      if (hasMultiple) {
+        prevOverlay.disabled = currentCardIndex === 0;
+        nextOverlay.disabled = currentCardIndex === cards.length - 1;
+      }
     }
 
     // Picker Button Creator
@@ -311,26 +357,19 @@ The process by which green plants and some other organisms use sunlight to synth
       return btn;
     }
 
-       // Open Picker - FIXED VERSION
+    // Open Picker
     function openPicker(items, currentValue, getKey, callback, representativeColor = null) {
       pickerContent.innerHTML = '';
       items.forEach(item => {
-        let key;
-        if (representativeColor) {
-          key = getKey(item);  // Use actual property for selection matching
-        } else {
-          key = item.color || getKey(item);
-        }
+        const key = representativeColor ? getKey(item) : (item.color || getKey(item));
         const isSelected = key === currentValue;
-
         const btnItem = representativeColor ? { color: representativeColor(item) } : item;
 
         const btn = createPickerButton(btnItem, isSelected, () => {
-          callback(item);  // Pass original item to callback
+          callback(item);
           pickerOverlay.classList.add('hidden');
           updatePreview();
         });
-
         pickerContent.appendChild(btn);
       });
       pickerOverlay.classList.remove('hidden');
@@ -338,27 +377,11 @@ The process by which green plants and some other organisms use sunlight to synth
 
     // Close Picker on Outside Tap
     pickerOverlay.addEventListener('click', (e) => {
-      if (e.target === pickerOverlay) {
-        pickerOverlay.classList.add('hidden');
-      }
-    });
-
-    // FAB Toggle
-    mainFab.addEventListener('click', () => {
-      isOpen = !isOpen;
-      if (isOpen) {
-        fabMenu.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
-        fabMenu.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
-        fabIcon.textContent = 'close';
-      } else {
-        fabMenu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-        fabMenu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
-        fabIcon.textContent = 'add';
-      }
+      if (e.target === pickerOverlay) pickerOverlay.classList.add('hidden');
     });
 
     // Action Buttons
-    document.querySelectorAll('#fabMenu button[data-action]').forEach(btn => {
+    document.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
         const c = cards[currentCardIndex];
@@ -368,19 +391,23 @@ The process by which green plants and some other organisms use sunlight to synth
           contentInput.value = c.content;
           watermarkInput.value = c.watermark || '';
           document.getElementById('editSheet').classList.remove('hidden');
-        } else if (action === 'font') {
-          openPicker(fonts, c.font, i => i.class, (f) => c.font = f.class);
-        } else if (action === 'textColor') {
-          openPicker(textColors.map(col => ({color: col})), c.textColor, i => i.color, (tc) => c.textColor = tc.color);
-        } else if (action === 'textShadow') {
-          openPicker(shadows, c.shadowIntensity, i => i.value, (s) => c.shadowIntensity = s.value);
-        } else if (action === 'bgColor') {
-          openPicker(backgroundOptions, c.bg, i => i.bg, (b) => c.bg = b.bg, i => i.color);
-        } else if (action === 'border') {
-          openPicker(borders, c.borderWidth, i => i.width, (b) => c.borderWidth = b.width);
-        } else if (action === 'aspect') {
-          openPicker(aspects, c.aspect, i => i.class, (a) => c.aspect = a.class);
-        } else if (action === 'addCard') {
+        } 
+        else if (action === 'font') {
+          openPicker(fonts, c.font, i => i.class, f => c.font = f.class);
+        } 
+        else if (action === 'textColor') {
+          openPicker(textColors.map(col => ({color: col})), c.textColor, i => i.color, tc => c.textColor = tc.color);
+        } 
+        else if (action === 'bgColor') {
+          openPicker(backgroundOptions, c.bg, i => i.bg, b => c.bg = b.bg, i => i.color);
+        } 
+        else if (action === 'border') {
+          openPicker(borders, c.borderWidth, i => i.width, b => c.borderWidth = b.width);
+        } 
+        else if (action === 'aspect') {
+          openPicker(aspects, c.aspect, i => i.class, a => c.aspect = a.class);
+        } 
+        else if (action === 'addCard') {
           cards.push({
             title: "",
             content: "",
@@ -394,34 +421,66 @@ The process by which green plants and some other organisms use sunlight to synth
             shadowIntensity: c.shadowIntensity
           });
           currentCardIndex = cards.length - 1;
-          updatePreview();
+          updatePreview(); // This calls updateUIState()
         }
-        mainFab.click(); // close menu
       });
     });
 
     // Close Edit Sheet
     document.getElementById('closeEdit').addEventListener('click', () => {
       document.getElementById('editSheet').classList.add('hidden');
-      updatePreview(); // apply changes if any
+      updatePreview();
     });
 
     // Live Updates from Edit Sheet
-    titleInput.addEventListener('input', () => {
-      cards[currentCardIndex].title = titleInput.value;
-      updatePreview();
+    titleInput.addEventListener('input', () => { cards[currentCardIndex].title = titleInput.value; updatePreview(); });
+    contentInput.addEventListener('input', () => { cards[currentCardIndex].content = contentInput.value; updatePreview(); });
+    watermarkInput.addEventListener('input', () => { cards[currentCardIndex].watermark = watermarkInput.value; updatePreview(); });
+
+
+downloadBtn.addEventListener('click', () => {
+  // 1. Hide unwanted elements
+  const originalPrevDisplay = prevOverlay.style.display;
+  const originalNextDisplay = nextOverlay.style.display;
+  const originalDownloadDisplay = downloadBtn.style.display;
+
+  prevOverlay.style.display = 'none';
+  nextOverlay.style.display = 'none';
+  downloadBtn.style.display = 'none';
+
+  // 2. Capture
+  html2canvas(cardPreview, { scale: 2 }).then(canvas => {
+    canvas.toBlob(blob => {
+      const link = document.createElement('a');
+      link.download = (cards[currentCardIndex].title || 'flashcard') + '.png';
+      link.href = URL.createObjectURL(blob);
+      link.click();
+
+      // 3. Restore visibility immediately after
+      prevOverlay.style.display = originalPrevDisplay;
+      nextOverlay.style.display = originalNextDisplay;
+      downloadBtn.style.display = originalDownloadDisplay;
     });
-    contentInput.addEventListener('input', () => {
-      cards[currentCardIndex].content = contentInput.value;
-      updatePreview();
+  });
+});
+
+    // Overlay Navigation
+    prevOverlay.addEventListener('click', () => {
+      if (currentCardIndex > 0) {
+        currentCardIndex--;
+        updatePreview();
+      }
     });
-    watermarkInput.addEventListener('input', () => {
-      cards[currentCardIndex].watermark = watermarkInput.value;
-      updatePreview();
+
+    nextOverlay.addEventListener('click', () => {
+      if (currentCardIndex < cards.length - 1) {
+        currentCardIndex++;
+        updatePreview();
+      }
     });
 
     // Download
-    document.getElementById('downloadBtn').addEventListener('click', () => {
+    downloadBtn.addEventListener('click', () => {
       html2canvas(cardPreview, { scale: 2 }).then(canvas => {
         canvas.toBlob(blob => {
           const link = document.createElement('a');
