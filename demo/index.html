@@ -1,1143 +1,1069 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Flashcard Generator</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&family=Merriweather:wght@400;700&family=Space+Grotesk:wght@400;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>FlashCard Maker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&family=Merriweather:wght@400;700&family=Space+Grotesk:wght@400;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200" rel="stylesheet"/>
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
   <style>
     :root {
-      --primary: #6366f1;
-      --surface: #ffffff;
-      --surface2: #f8f7ff;
-      --border: #e5e3ff;
-      --text: #1e1b4b;
+      --ink: #1e1b4b;
       --muted: #6b7280;
-      --toolbar-h: 60px;
+      --accent: #6366f1;
+      --accent-soft: #ede9fe;
+      --border: #e5e3ff;
+      --surface: #fff;
+      --bg: #f0efff;
+      --panel: #f8f7ff;
+      --top-h: 46vh;
+      --bot-h: 54vh;
+      --tab-h: 52px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%; height: 100dvh;
+      overflow: hidden;
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      height: 100dvh;
-      overflow: hidden;
-      background: #eeeeff;
-      font-family: 'Space Grotesk', sans-serif;
+    /* ═══════════════════════════════════════
+       TOP — card preview, fixed height
+    ═══════════════════════════════════════ */
+    #top {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--top-h);
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 12px 6px;
+      background: var(--bg);
+      z-index: 1;
     }
 
-    /* ── Aspect ratios ── */
     .aspect-1-1  { aspect-ratio: 1/1; }
     .aspect-3-4  { aspect-ratio: 3/4; }
     .aspect-4-3  { aspect-ratio: 4/3; }
     .aspect-16-9 { aspect-ratio: 16/9; }
     .aspect-9-16 { aspect-ratio: 9/16; }
 
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-    /* ══════════════════════════════════
-       PREVIEW AREA
-    ══════════════════════════════════ */
-    #previewArea {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 16px 6px;
-      overflow: hidden;
-      /* When sheet open, shrink to show card above sheet */
-      transition: padding-bottom 0.3s cubic-bezier(.4,0,.2,1),
-                  transform 0.3s cubic-bezier(.4,0,.2,1);
-    }
-
-    /* The card itself */
     #cardPreview {
       position: relative;
+      /* fill available width but respect aspect ratio + max height */
       width: 100%;
-      max-width: min(260px, calc(100vw - 32px));
-      border-radius: 20px;
+      max-width: min(200px, 48vw);
+      border-radius: 18px;
       overflow: hidden;
-      box-shadow: 0 10px 40px rgba(99,102,241,0.24), 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 8px 32px rgba(99,102,241,.25), 0 2px 8px rgba(0,0,0,.1);
+      border: 4px solid transparent;
       flex-shrink: 0;
     }
-
-    /* Nav overlay arrows */
-    .nav-overlay {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      padding: 7px; border-radius: 9999px;
-      background: rgba(0,0,0,0.3); backdrop-filter: blur(6px);
-      color: white; opacity: 0; transition: opacity 0.2s;
-      z-index: 20; cursor: pointer; border: none;
+    #bgLayer { position: absolute; inset: 0; }
+    #cardContent {
+      position: absolute; inset: 0; z-index: 5;
+      display: flex; flex-direction: column;
+      padding: 14px 12px;
     }
-    .nav-overlay { display: none; }
-    .has-multiple .nav-overlay { display: flex !important; }
-    .has-multiple #cardPreview:hover .nav-overlay { opacity: 0.7; }
-
-    #dotIndicators { display: flex; gap: 5px; margin-top: 7px; min-height: 10px; }
-
-    /* Download btn */
-    #downloadBtn {
-      position: absolute; bottom: 10px; right: 10px; z-index: 25;
-      width: 42px; height: 42px; border-radius: 50%;
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
-      box-shadow: 0 3px 14px rgba(0,0,0,0.18);
-      display: flex; align-items: center; justify-content: center;
-      border: none; cursor: pointer; transition: transform 0.15s;
+    #previewTitle {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; font-weight: 700;
+      color: #fff; line-height: 1.2;
+      text-align: center;
+      word-break: break-word;
     }
-    #downloadBtn:hover { transform: scale(1.08); }
-    #downloadBtn:active { transform: scale(0.93); }
-
-    #cardCounter {
-      position: absolute; top: 8px; right: 8px; z-index: 25;
-      background: rgba(0,0,0,0.35); backdrop-filter: blur(6px);
-      color: white; font-size: 9px; font-weight: 700;
-      padding: 2px 8px; border-radius: 20px; pointer-events: none;
+    #previewDivider {
+      width: 32px; height: 2px; border-radius: 9px;
+      background: rgba(255,255,255,.5);
+      margin: 6px auto; display: none;
     }
-
+    #contentBlock {
+      flex: 1; display: flex; justify-content: center;
+    }
+    #previewContent {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px; color: #fff;
+      text-align: center; line-height: 1.6;
+      width: 100%; align-self: center;
+      word-break: break-word;
+    }
     #watermarkEl {
-      position: absolute; bottom: 10px; left: 10px; z-index: 12;
-      opacity: 0.55; font-weight: 700; color: white;
-      font-size: 11px; pointer-events: none;
+      position: absolute; bottom: 7px; left: 7px; z-index: 10;
+      opacity: .5; font-weight: 700; color: white;
+      font-size: 8px; pointer-events: none;
     }
-
     #logoOverlay {
-      position: absolute; cursor: grab; user-select: none; z-index: 15;
-      touch-action: none;
+      position: absolute; z-index: 12;
+      cursor: grab; user-select: none; touch-action: none;
     }
     #logoOverlay:active { cursor: grabbing; }
     #logoOverlay img { display: block; border-radius: 3px; }
     .logo-handle {
       position: absolute; bottom: -5px; right: -5px;
-      width: 11px; height: 11px; background: white;
-      border: 2px solid var(--primary); border-radius: 2px; cursor: se-resize;
+      width: 10px; height: 10px;
+      background: white; border: 2px solid var(--accent); border-radius: 2px;
+      cursor: se-resize;
     }
-
-    /* ══════════════════════════════════
-       TOOLBAR
-    ══════════════════════════════════ */
-    #toolbar {
-      flex-shrink: 0;
-      height: var(--toolbar-h);
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(99,102,241,0.14);
-      box-shadow: 0 -2px 18px rgba(99,102,241,0.09);
-      display: flex; align-items: center;
-      position: relative; z-index: 50;
+    #downloadBtn {
+      position: absolute; bottom: 8px; right: 8px; z-index: 20;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: rgba(255,255,255,.9); backdrop-filter: blur(6px);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,.18);
+      transition: transform .15s;
     }
-    .toolbar-inner {
-      width: 100%; max-width: 520px; margin: 0 auto;
-      padding: 0 4px;
-      display: flex; justify-content: space-around;
-    }
-    .toolbar-btn {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      color: #64748b; background: none; border: none; cursor: pointer;
-      padding: 5px 6px; border-radius: 9px; transition: color 0.15s;
-      font-family: 'Space Grotesk', sans-serif; flex: 1; min-width: 0;
-    }
-    .toolbar-btn:hover { color: var(--primary); }
-    .toolbar-btn .material-symbols-outlined { font-size: 21px; }
-    .toolbar-btn .tb-label {
-      font-size: 8.5px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
-    }
-
-    /* ══════════════════════════════════
-       BOTTOM SHEETS — PARTIAL HEIGHT
-       Card stays visible above the sheet
-    ══════════════════════════════════ */
-    .sheet {
-      position: fixed;
-      left: 0; right: 0;
-      bottom: var(--toolbar-h);
-      z-index: 45;
-      /* Default height — overridden per-sheet */
-      height: 52vh;
-      background: var(--surface);
-      border-radius: 22px 22px 0 0;
-      box-shadow: 0 -6px 40px rgba(99,102,241,0.18), 0 -1px 0 rgba(99,102,241,0.08);
-      transform: translateY(110%);
-      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
-      display: flex; flex-direction: column;
-      overflow: hidden;
+    #downloadBtn:active { transform: scale(.92); }
+    #cardCounter {
+      position: absolute; top: 6px; right: 6px; z-index: 20;
+      background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+      color: white; font-size: 8px; font-weight: 700;
+      padding: 2px 6px; border-radius: 20px;
       pointer-events: none;
     }
-    .sheet.open {
-      transform: translateY(0);
-      pointer-events: all;
+    .nav-overlay {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      padding: 5px; border-radius: 50%;
+      background: rgba(0,0,0,.28); backdrop-filter: blur(4px);
+      color: white; border: none; cursor: pointer;
+      opacity: 0; transition: opacity .2s; z-index: 20;
+      display: none;
+    }
+    .has-multiple .nav-overlay { display: flex !important; opacity: .65; }
+    #dots {
+      display: flex; gap: 5px; align-items: center; min-height: 8px;
     }
 
-    /* Compact sheets */
-    #bgSheet    { height: 36vh; }
-    #aspectSheet{ height: 26vh; }
-    #borderSheet{ height: 44vh; }
-
-    .sheet-drag {
-      flex-shrink: 0; padding: 10px 0 4px;
-      display: flex; justify-content: center; cursor: grab;
+    /* ═══════════════════════════════════════
+       BOTTOM — tab bar + panel
+    ═══════════════════════════════════════ */
+    #bottom {
+      position: fixed;
+      top: var(--top-h);
+      left: 0; right: 0;
+      height: var(--bot-h);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-radius: 22px 22px 0 0;
+      box-shadow: 0 -4px 30px rgba(99,102,241,.14);
+      overflow: hidden;
+      z-index: 10;
     }
-    .sheet-handle { width: 38px; height: 4px; border-radius: 9px; background: #d1d5db; }
 
-    .sheet-header {
+    /* drag handle */
+    #dragHandle {
       flex-shrink: 0;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 4px 14px 8px;
-      border-bottom: 1px solid var(--border);
+      height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: ns-resize;
     }
-    .sheet-title { font-size: 14px; font-weight: 800; color: var(--text); }
-    .sheet-done {
-      padding: 5px 15px; border-radius: 20px;
-      background: var(--primary); color: white;
-      font-weight: 700; font-size: 12px; border: none; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+    #dragHandle::after {
+      content: '';
+      width: 36px; height: 4px;
+      background: #d1d5db; border-radius: 9px;
     }
 
-    .sheet-body {
-      flex: 1; overflow-y: auto; overflow-x: hidden;
-      padding: 10px 14px 14px;
+    /* Tab bar */
+    #tabBar {
+      flex-shrink: 0;
+      display: flex;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      height: var(--tab-h);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #tabBar::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 0 12px; gap: 2px;
+      min-width: 56px;
+      border: none; background: transparent; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--muted);
+      border-bottom: 2.5px solid transparent;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .tab .material-symbols-outlined { font-size: 18px; }
+    .tab .tlabel { font-size: 9px; font-weight: 700; letter-spacing: .03em; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-add { color: var(--accent) !important; }
+
+    /* Panel area */
+    #panelWrap {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    .panel {
+      position: absolute; inset: 0;
+      overflow-y: auto; overflow-x: hidden;
+      padding: 10px 14px 20px;
+      opacity: 0; pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity .18s, transform .18s;
       -webkit-overflow-scrolling: touch;
     }
-    .sheet-body::-webkit-scrollbar { width: 3px; }
-    .sheet-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .panel.active { opacity: 1; pointer-events: all; transform: none; }
+    .panel::-webkit-scrollbar { width: 3px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-    /* ── Section label ── */
-    .sec {
+    /* ── Controls inside panels ── */
+    .row { margin-bottom: 10px; }
+    .lbl {
       font-size: 9.5px; font-weight: 700; color: var(--muted);
       text-transform: uppercase; letter-spacing: .07em;
-      margin: 10px 0 6px;
       display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px;
     }
-    .sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .lbl::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    /* ── Text input ── */
-    .finput {
-      width: 100%; padding: 8px 12px; border-radius: 11px;
-      background: var(--surface2); border: 1.5px solid var(--border);
-      font-size: 14px; color: var(--text); outline: none;
+    /* Text input */
+    .tinput {
+      width: 100%; padding: 8px 11px; border-radius: 11px;
+      background: var(--panel); border: 1.5px solid var(--border);
+      font-size: 13px; color: var(--ink); outline: none;
       font-family: 'Space Grotesk', sans-serif;
-      transition: border-color 0.18s;
+      transition: border-color .18s;
     }
-    .finput:focus { border-color: var(--primary); }
-    textarea.finput { resize: none; min-height: 66px; line-height: 1.5; }
+    .tinput:focus { border-color: var(--accent); }
+    textarea.tinput { resize: none; min-height: 60px; line-height: 1.5; }
 
-    /* ── Font pills ── */
-    .font-row { display: flex; flex-wrap: wrap; gap: 5px; }
-    .font-pill {
-      padding: 5px 12px; border-radius: 20px;
-      border: 1.5px solid var(--border); font-size: 12px; font-weight: 600;
-      cursor: pointer; background: var(--surface2); color: var(--text);
-      transition: all 0.14s; white-space: nowrap;
+    /* Font pills */
+    .font-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+    .fpill {
+      padding: 5px 11px; border-radius: 20px;
+      border: 1.5px solid var(--border); font-size: 11px; font-weight: 600;
+      cursor: pointer; background: var(--panel); color: var(--ink);
+      transition: all .13s; white-space: nowrap;
     }
-    .font-pill.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+    .fpill.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
-    /* ── Slider ── */
-    .sl-row { display: flex; align-items: center; gap: 8px; }
-    .sl-icon { font-size: 15px; color: var(--muted); flex-shrink: 0; }
+    /* Slider */
+    .sl { display: flex; align-items: center; gap: 8px; }
+    .sl-ico { font-size: 14px; color: var(--muted); flex-shrink: 0; }
     input[type=range] {
       -webkit-appearance: none; flex: 1; height: 5px;
       border-radius: 3px; background: var(--border); outline: none;
     }
     input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%;
-      background: var(--primary); cursor: pointer;
-      box-shadow: 0 1px 5px rgba(99,102,241,.35);
+      -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent); cursor: pointer;
+      box-shadow: 0 1px 5px rgba(99,102,241,.38);
     }
 
-    /* ── Icon buttons ── */
-    .irow { display: flex; gap: 5px; }
-    .ibtn {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 7px 4px; border-radius: 9px;
-      background: var(--surface2); border: 1.5px solid var(--border);
-      cursor: pointer; font-size: 9.5px; font-weight: 600;
-      color: var(--muted); gap: 3px; transition: all 0.14s;
+    /* Button grid */
+    .brow { display: flex; gap: 5px; }
+    .bbtn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 7px 4px; border-radius: 9px; gap: 2px;
+      background: var(--panel); border: 1.5px solid var(--border);
+      cursor: pointer; font-size: 9px; font-weight: 600;
+      color: var(--muted); transition: all .13s;
       font-family: 'Space Grotesk', sans-serif;
     }
-    .ibtn .material-symbols-outlined { font-size: 17px; }
-    .ibtn:hover  { border-color: var(--primary); color: var(--primary); background: #f5f3ff; }
-    .ibtn.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+    .bbtn .material-symbols-outlined { font-size: 15px; }
+    .bbtn:hover { border-color: var(--accent); color: var(--accent); }
+    .bbtn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
-    /* ── Align buttons ── */
-    .arow { display: flex; gap: 5px; }
+    /* Align */
     .abtn {
       flex: 1; padding: 7px; border-radius: 9px;
-      border: 1.5px solid var(--border); background: var(--surface2);
+      border: 1.5px solid var(--border); background: var(--panel);
       cursor: pointer; color: var(--muted);
       display: flex; align-items: center; justify-content: center;
-      transition: all 0.14s;
+      transition: all .13s;
     }
-    .abtn .material-symbols-outlined { font-size: 17px; }
-    .abtn:hover  { border-color: var(--primary); color: var(--primary); }
-    .abtn.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+    .abtn .material-symbols-outlined { font-size: 15px; }
+    .abtn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
-    /* ── Color swatches ── */
+    /* Color swatches */
     .crow { display: flex; flex-wrap: wrap; gap: 6px; }
-    .swatch {
-      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
-      border: 2.5px solid transparent; transition: transform 0.13s, box-shadow 0.13s;
+    .csw {
+      width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+      border: 2.5px solid transparent; transition: transform .12s, box-shadow .12s;
       position: relative; flex-shrink: 0;
     }
-    .swatch:hover { transform: scale(1.2); }
-    .swatch.sel {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+    .csw:active { transform: scale(1.2); }
+    .csw.on {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent);
     }
-    .swatch.sel::after {
+    .csw.on::after {
       content: '✓'; position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; color: white; font-weight: bold;
-      text-shadow: 0 1px 3px rgba(0,0,0,.55);
+      font-size: 10px; color: white; font-weight: 800;
+      text-shadow: 0 1px 3px rgba(0,0,0,.5);
     }
 
-    /* ── BG pills ── */
-    .bg-row { display: flex; gap: 7px; padding: 3px 2px; }
-    .bg-pill {
-      width: 46px; height: 28px; border-radius: 8px; flex-shrink: 0; cursor: pointer;
+    /* BG gradient swatches */
+    .bgrow { display: flex; flex-wrap: wrap; gap: 6px; }
+    .bgpill {
+      width: 38px; height: 24px; border-radius: 7px; flex-shrink: 0; cursor: pointer;
       border: 2.5px solid transparent;
-      transition: transform 0.13s, box-shadow 0.13s;
+      transition: transform .12s, box-shadow .12s;
     }
-    .bg-pill:hover { transform: scale(1.1); }
-    .bg-pill.sel {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px white, 0 0 0 3.5px var(--primary);
+    .bgpill:active { transform: scale(1.12); }
+    .bgpill.on {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px white, 0 0 0 3.5px var(--accent);
     }
 
-    /* ── Position grid ── */
-    .pos-grid {
-      display: grid; grid-template-columns: repeat(3,1fr); gap: 5px;
-      background: var(--surface2); border-radius: 11px;
-      padding: 7px; border: 1.5px solid var(--border);
+    /* Position grid */
+    .pgrid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 4px;
+      background: var(--panel); border-radius: 10px;
+      padding: 6px; border: 1.5px solid var(--border);
     }
-    .pos-btn {
-      height: 32px; border-radius: 7px;
+    .pbtn {
+      height: 28px; border-radius: 6px;
       border: 1.5px solid var(--border); background: var(--surface);
-      cursor: pointer; position: relative; transition: all 0.13s;
+      cursor: pointer; position: relative; transition: all .12s;
     }
-    .pos-btn:hover { border-color: var(--primary); background: #ede9fe; }
-    .pos-btn .dot {
+    .pbtn:active { border-color: var(--accent); background: var(--accent-soft); }
+    .pdot {
       width: 5px; height: 5px; border-radius: 50%;
-      background: var(--primary); position: absolute;
+      background: var(--accent); position: absolute;
     }
 
-    /* ── Toggle ── */
-    .trow {
-      display: flex; align-items: center; gap: 9px; cursor: pointer; padding: 5px 0;
+    /* Toggle */
+    .togrow {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; padding: 4px 0;
     }
-    .trow input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); }
-    .trow span { font-size: 13px; color: var(--text); }
+    .togrow input { width: 14px; height: 14px; accent-color: var(--accent); }
+    .togrow span { font-size: 12px; color: var(--ink); }
 
-    /* ── Upload area ── */
-    #logoUploadArea {
-      border: 2px dashed var(--border); border-radius: 13px;
-      padding: 18px; text-align: center; cursor: pointer;
-      background: var(--surface2); transition: border-color 0.18s;
+    /* Upload */
+    .upload-box {
+      border: 2px dashed var(--border); border-radius: 11px;
+      padding: 14px; text-align: center; cursor: pointer;
+      background: var(--panel); transition: border-color .18s;
     }
-    #logoUploadArea:hover { border-color: var(--primary); }
+    .upload-box:active { border-color: var(--accent); }
 
-    .remove-btn {
-      width: 100%; padding: 9px; border-radius: 11px;
+    .rmvbtn {
+      width: 100%; padding: 8px; margin-top: 7px; border-radius: 10px;
       border: 1.5px solid #fecaca; background: #fff5f5;
       color: #ef4444; font-weight: 700; font-size: 12px;
       cursor: pointer; font-family: 'Space Grotesk', sans-serif;
-      margin-top: 8px;
     }
-
-    /* When sheet open, compress preview upward */
-    body.sheet-sm  #previewArea { padding-bottom: calc(26vh + var(--toolbar-h) + 6px); }
-    body.sheet-md  #previewArea { padding-bottom: calc(36vh + var(--toolbar-h) + 6px); }
-    body.sheet-lg  #previewArea { padding-bottom: calc(44vh + var(--toolbar-h) + 6px); }
-    body.sheet-xl  #previewArea { padding-bottom: calc(52vh + var(--toolbar-h) + 6px); }
   </style>
 </head>
 <body>
 
-<!-- ═══ PREVIEW ═══ -->
-<main id="previewArea">
+<!-- ═══ TOP: Card Preview ═══ -->
+<div id="top">
   <div id="cardPreview" class="aspect-3-4" style="border:4px solid transparent;">
     <div id="bgLayer" style="position:absolute;inset:0;background:linear-gradient(135deg,#7c3aed,#c026d3);"></div>
-    <div style="position:absolute;inset:0;background:rgba(255,255,255,0.06);pointer-events:none;"></div>
-
-    <div id="cardContent" style="position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;padding:20px 18px;">
+    <div style="position:absolute;inset:0;background:rgba(255,255,255,.07);pointer-events:none;z-index:3;"></div>
+    <div id="cardContent">
       <div id="headerBlock">
-        <h1 id="previewTitle" style="font-family:'Playfair Display',serif;font-size:28px;color:#fff;font-weight:700;line-height:1.2;text-align:center;">
-          FlashCard Maker
-        </h1>
+        <div id="previewTitle">FlashCard Maker</div>
       </div>
-      <div id="previewDivider" style="display:none;width:36px;height:3px;border-radius:9px;background:rgba(255,255,255,0.5);margin:7px auto;"></div>
-      <div id="contentBlock" style="flex:1;display:flex;justify-content:center;">
-        <p id="previewContent" style="font-family:'Inter',sans-serif;font-size:12px;color:#fff;text-align:center;line-height:1.6;width:100%;align-self:center;">
-          Tap Header or Content in the toolbar. See your changes live above!
-        </p>
+      <div id="previewDivider"></div>
+      <div id="contentBlock">
+        <div id="previewContent">Tap a tab below to start editing. Watch changes live here!</div>
       </div>
     </div>
-
-    <div id="watermarkEl" style="position:absolute;bottom:9px;left:9px;z-index:12;opacity:0.55;font-weight:700;color:white;font-size:10px;pointer-events:none;display:none;"></div>
-
-    <div id="logoOverlay" style="display:none;position:absolute;z-index:15;cursor:grab;user-select:none;touch-action:none;">
-      <img id="logoImg" src="" alt="" style="width:60px;display:block;border-radius:3px;" />
+    <div id="watermarkEl" style="display:none;"></div>
+    <div id="logoOverlay" style="display:none; position:absolute; z-index:15; cursor:grab; user-select:none; touch-action:none;">
+      <img id="logoImg" src="" alt="" style="width:50px;display:block;border-radius:3px;"/>
       <div class="logo-handle" id="logoResizeHandle"></div>
     </div>
-
-    <div id="cardCounter" style="display:none;position:absolute;top:7px;right:7px;z-index:25;background:rgba(0,0,0,0.35);backdrop-filter:blur(6px);color:white;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;pointer-events:none;font-family:'Space Grotesk',sans-serif;"></div>
-
-    <button id="prevOverlay" class="nav-overlay" style="left:7px;">
-      <span class="material-symbols-outlined" style="font-size:24px;">chevron_left</span>
+    <div id="cardCounter" style="display:none;"></div>
+    <button id="prevOverlay" class="nav-overlay" style="left:5px;">
+      <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
     </button>
-    <button id="nextOverlay" class="nav-overlay" style="right:7px;">
-      <span class="material-symbols-outlined" style="font-size:24px;">chevron_right</span>
+    <button id="nextOverlay" class="nav-overlay" style="right:5px;">
+      <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
     </button>
-
-    <button id="downloadBtn" title="Download">
-      <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary);">download</span>
+    <button id="downloadBtn">
+      <span class="material-symbols-outlined" style="font-size:16px;color:var(--accent);">download</span>
     </button>
   </div>
-  <div id="dotIndicators"></div>
-</main>
+  <div id="dots"></div>
+</div>
 
-<!-- ═══ TOOLBAR ═══ -->
-<div id="toolbar">
-  <div class="toolbar-inner">
-    <button class="toolbar-btn" data-action="aspect">
-      <span class="material-symbols-outlined">aspect_ratio</span>
-      <span class="tb-label">Ratio</span>
-    </button>
-    <button class="toolbar-btn" data-action="editHeader">
+<!-- ═══ BOTTOM: Tabs + Panel ═══ -->
+<div id="bottom">
+  <div id="dragHandle"></div>
+
+  <!-- Tab bar -->
+  <div id="tabBar">
+    <button class="tab active" data-tab="header">
       <span class="material-symbols-outlined">title</span>
-      <span class="tb-label">Header</span>
+      <span class="tlabel">Header</span>
     </button>
-    <button class="toolbar-btn" data-action="editContent">
+    <button class="tab" data-tab="content">
       <span class="material-symbols-outlined">notes</span>
-      <span class="tb-label">Content</span>
+      <span class="tlabel">Content</span>
     </button>
-    <button class="toolbar-btn" data-action="bgColor">
+    <button class="tab" data-tab="bg">
       <span class="material-symbols-outlined">gradient</span>
-      <span class="tb-label">BG</span>
+      <span class="tlabel">BG</span>
     </button>
-    <button class="toolbar-btn" data-action="border">
+    <button class="tab" data-tab="border">
       <span class="material-symbols-outlined">border_outer</span>
-      <span class="tb-label">Border</span>
+      <span class="tlabel">Border</span>
     </button>
-    <button class="toolbar-btn" data-action="logo">
+    <button class="tab" data-tab="ratio">
+      <span class="material-symbols-outlined">aspect_ratio</span>
+      <span class="tlabel">Ratio</span>
+    </button>
+    <button class="tab" data-tab="logo">
       <span class="material-symbols-outlined">add_photo_alternate</span>
-      <span class="tb-label">Logo</span>
+      <span class="tlabel">Logo</span>
     </button>
-    <button class="toolbar-btn" data-action="addCard">
-      <span class="material-symbols-outlined" style="color:var(--primary)">add_card</span>
-      <span class="tb-label" style="color:var(--primary)">New</span>
+    <button class="tab tab-add" data-tab="new">
+      <span class="material-symbols-outlined">add_card</span>
+      <span class="tlabel">New</span>
     </button>
   </div>
-</div>
 
+  <!-- Panels -->
+  <div id="panelWrap">
 
-<!-- ═══ HEADER SHEET ═══ -->
-<div id="headerSheet" class="sheet">
-  <div class="sheet-drag"><div class="sheet-handle"></div></div>
-  <div class="sheet-header">
-    <span class="sheet-title">✏️ Header</span>
-    <button class="sheet-done" id="closeHeader">Done</button>
-  </div>
-  <div class="sheet-body">
-    <input id="titleInput" type="text" class="finput" placeholder="Header text…" />
-
-    <div class="sec">Font</div>
-    <div class="font-row" id="headerFontRow"></div>
-
-    <div class="sec">Size & Style</div>
-    <div class="sl-row" style="margin-bottom:7px;">
-      <span class="material-symbols-outlined sl-icon">text_decrease</span>
-      <input type="range" id="headerSizeSlider" min="14" max="80" value="28" />
-      <span class="material-symbols-outlined sl-icon">text_increase</span>
-    </div>
-    <div class="irow" style="margin-bottom:3px;">
-      <button class="ibtn active" id="headerBoldBtn">
-        <span class="material-symbols-outlined">format_bold</span><span>Bold</span>
-      </button>
-      <button class="ibtn" id="headerItalicBtn">
-        <span class="material-symbols-outlined">format_italic</span><span>Italic</span>
-      </button>
-    </div>
-
-    <div class="sec">Alignment</div>
-    <div class="arow" style="margin-bottom:3px;">
-      <button class="abtn" data-align-header="left"><span class="material-symbols-outlined">format_align_left</span></button>
-      <button class="abtn active" data-align-header="center"><span class="material-symbols-outlined">format_align_center</span></button>
-      <button class="abtn" data-align-header="right"><span class="material-symbols-outlined">format_align_right</span></button>
-    </div>
-
-    <div class="sec">Color</div>
-    <div class="crow" id="headerColorRow"></div>
-
-    <div class="sec">Separator</div>
-    <label class="trow">
-      <input type="checkbox" id="dividerToggle" />
-      <span>Show divider line below header</span>
-    </label>
-  </div>
-</div>
-
-
-<!-- ═══ CONTENT SHEET ═══ -->
-<div id="contentSheet" class="sheet">
-  <div class="sheet-drag"><div class="sheet-handle"></div></div>
-  <div class="sheet-header">
-    <span class="sheet-title">📝 Content</span>
-    <button class="sheet-done" id="closeContent">Done</button>
-  </div>
-  <div class="sheet-body">
-    <textarea id="contentInput" class="finput" rows="3" placeholder="Content text…"></textarea>
-
-    <div class="sec">Font</div>
-    <div class="font-row" id="contentFontRow"></div>
-
-    <div class="sec">Size & Style</div>
-    <div class="sl-row" style="margin-bottom:7px;">
-      <span class="material-symbols-outlined sl-icon">text_decrease</span>
-      <input type="range" id="contentSizeSlider" min="9" max="40" value="12" />
-      <span class="material-symbols-outlined sl-icon">text_increase</span>
-    </div>
-    <div class="irow" style="margin-bottom:3px;">
-      <button class="ibtn" id="contentBoldBtn">
-        <span class="material-symbols-outlined">format_bold</span><span>Bold</span>
-      </button>
-      <button class="ibtn" id="contentItalicBtn">
-        <span class="material-symbols-outlined">format_italic</span><span>Italic</span>
-      </button>
+    <!-- HEADER panel -->
+    <div class="panel active" id="panel-header">
+      <div class="row">
+        <input id="titleInput" type="text" class="tinput" placeholder="Header text…"/>
+      </div>
+      <div class="row">
+        <div class="lbl">Font</div>
+        <div class="font-wrap" id="hFontRow"></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Size</div>
+        <div class="sl">
+          <span class="material-symbols-outlined sl-ico">text_decrease</span>
+          <input type="range" id="hSize" min="12" max="72" value="20"/>
+          <span class="material-symbols-outlined sl-ico">text_increase</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Style</div>
+        <div class="brow">
+          <button class="bbtn on" id="hBold"><span class="material-symbols-outlined">format_bold</span><span>Bold</span></button>
+          <button class="bbtn" id="hItalic"><span class="material-symbols-outlined">format_italic</span><span>Italic</span></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Align</div>
+        <div class="brow">
+          <button class="abtn" data-ah="left"><span class="material-symbols-outlined">format_align_left</span></button>
+          <button class="abtn on" data-ah="center"><span class="material-symbols-outlined">format_align_center</span></button>
+          <button class="abtn" data-ah="right"><span class="material-symbols-outlined">format_align_right</span></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Color</div>
+        <div class="crow" id="hColorRow"></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Divider</div>
+        <label class="togrow">
+          <input type="checkbox" id="divToggle"/>
+          <span>Show separator line below header</span>
+        </label>
+      </div>
     </div>
 
-    <div class="sec">Alignment</div>
-    <div class="arow" style="margin-bottom:3px;">
-      <button class="abtn" data-align-content="left"><span class="material-symbols-outlined">format_align_left</span></button>
-      <button class="abtn active" data-align-content="center"><span class="material-symbols-outlined">format_align_center</span></button>
-      <button class="abtn" data-align-content="right"><span class="material-symbols-outlined">format_align_right</span></button>
+    <!-- CONTENT panel -->
+    <div class="panel" id="panel-content">
+      <div class="row">
+        <textarea id="contentInput" class="tinput" rows="3" placeholder="Content text…"></textarea>
+      </div>
+      <div class="row">
+        <div class="lbl">Font</div>
+        <div class="font-wrap" id="cFontRow"></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Size</div>
+        <div class="sl">
+          <span class="material-symbols-outlined sl-ico">text_decrease</span>
+          <input type="range" id="cSize" min="8" max="36" value="10"/>
+          <span class="material-symbols-outlined sl-ico">text_increase</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Style</div>
+        <div class="brow">
+          <button class="bbtn" id="cBold"><span class="material-symbols-outlined">format_bold</span><span>Bold</span></button>
+          <button class="bbtn" id="cItalic"><span class="material-symbols-outlined">format_italic</span><span>Italic</span></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Align</div>
+        <div class="brow">
+          <button class="abtn" data-ac="left"><span class="material-symbols-outlined">format_align_left</span></button>
+          <button class="abtn on" data-ac="center"><span class="material-symbols-outlined">format_align_center</span></button>
+          <button class="abtn" data-ac="right"><span class="material-symbols-outlined">format_align_right</span></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Vertical</div>
+        <div class="brow">
+          <button class="bbtn" data-va="top"><span class="material-symbols-outlined">vertical_align_top</span><span>Top</span></button>
+          <button class="bbtn on" data-va="center"><span class="material-symbols-outlined">vertical_align_center</span><span>Mid</span></button>
+          <button class="bbtn" data-va="bottom"><span class="material-symbols-outlined">vertical_align_bottom</span><span>Bot</span></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Color</div>
+        <div class="crow" id="cColorRow"></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Watermark</div>
+        <input id="wmInput" type="text" class="tinput" placeholder="@yourbrand (optional)"/>
+      </div>
     </div>
 
-    <div class="sec">Vertical Position</div>
-    <div class="irow" style="margin-bottom:3px;">
-      <button class="ibtn" data-valign="top"><span class="material-symbols-outlined">vertical_align_top</span><span>Top</span></button>
-      <button class="ibtn active" data-valign="center"><span class="material-symbols-outlined">vertical_align_center</span><span>Center</span></button>
-      <button class="ibtn" data-valign="bottom"><span class="material-symbols-outlined">vertical_align_bottom</span><span>Bottom</span></button>
+    <!-- BG panel -->
+    <div class="panel" id="panel-bg">
+      <div class="row">
+        <div class="lbl">Gradient</div>
+        <div class="bgrow" id="bgRow"></div>
+      </div>
     </div>
 
-    <div class="sec">Color</div>
-    <div class="crow" id="contentColorRow"></div>
-
-    <div class="sec">Watermark</div>
-    <input id="watermarkInput" type="text" class="finput" placeholder="@yourbrand (optional)" />
-  </div>
-</div>
-
-
-<!-- ═══ BG SHEET ═══ -->
-<div id="bgSheet" class="sheet">
-  <div class="sheet-drag"><div class="sheet-handle"></div></div>
-  <div class="sheet-header">
-    <span class="sheet-title">🎨 Background</span>
-    <button class="sheet-done" id="closeBg">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div style="overflow-x:auto;" class="scrollbar-hide">
-      <div id="bgPickerRow" class="bg-row" style="width:max-content;"></div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══ BORDER SHEET ═══ -->
-<div id="borderSheet" class="sheet">
-  <div class="sheet-drag"><div class="sheet-handle"></div></div>
-  <div class="sheet-header">
-    <span class="sheet-title">⬜ Border</span>
-    <button class="sheet-done" id="closeBorder">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div class="sec" style="margin-top:0;">Width</div>
-    <div class="irow" id="borderWidthRow"></div>
-    <div class="sec">Color</div>
-    <div class="crow" id="borderColorRow"></div>
-  </div>
-</div>
-
-
-<!-- ═══ ASPECT SHEET ═══ -->
-<div id="aspectSheet" class="sheet">
-  <div class="sheet-drag"><div class="sheet-handle"></div></div>
-  <div class="sheet-header">
-    <span class="sheet-title">⬛ Aspect Ratio</span>
-    <button class="sheet-done" id="closeAspect">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div class="irow" id="aspectRow" style="flex-wrap:wrap;"></div>
-  </div>
-</div>
-
-
-<!-- ═══ LOGO SHEET ═══ -->
-<div id="logoSheet" class="sheet">
-  <div class="sheet-drag"><div class="sheet-handle"></div></div>
-  <div class="sheet-header">
-    <span class="sheet-title">🖼 Logo</span>
-    <button class="sheet-done" id="closeLogo">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div id="logoUploadArea">
-      <span class="material-symbols-outlined" style="font-size:28px;color:var(--muted);display:block;margin-bottom:4px;">upload_file</span>
-      <p style="font-size:12px;font-weight:600;color:var(--muted);">Tap to upload logo</p>
-      <p style="font-size:10px;color:#9ca3af;margin-top:2px;">PNG · JPG · SVG · WebP</p>
-      <input type="file" id="logoFileInput" accept="image/*" style="display:none;" />
+    <!-- BORDER panel -->
+    <div class="panel" id="panel-border">
+      <div class="row">
+        <div class="lbl">Width</div>
+        <div class="brow" id="bwRow"></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Color</div>
+        <div class="crow" id="bcRow"></div>
+      </div>
     </div>
 
-    <div class="sec">Size</div>
-    <div class="sl-row">
-      <span class="material-symbols-outlined sl-icon">photo_size_select_small</span>
-      <input type="range" id="logoSizeSlider" min="24" max="200" value="60" />
-      <span class="material-symbols-outlined sl-icon">photo_size_select_large</span>
+    <!-- RATIO panel -->
+    <div class="panel" id="panel-ratio">
+      <div class="row">
+        <div class="lbl">Aspect Ratio</div>
+        <div class="brow flex-wrap" id="ratioRow" style="flex-wrap:wrap;gap:5px;"></div>
+      </div>
     </div>
 
-    <div class="sec">Quick Position</div>
-    <div class="pos-grid">
-      <button class="pos-btn" data-pos="top-left"><span class="dot" style="top:3px;left:3px;"></span></button>
-      <button class="pos-btn" data-pos="top-center"><span class="dot" style="top:3px;left:50%;transform:translateX(-50%);"></span></button>
-      <button class="pos-btn" data-pos="top-right"><span class="dot" style="top:3px;right:3px;"></span></button>
-      <button class="pos-btn" data-pos="mid-left"><span class="dot" style="top:50%;transform:translateY(-50%);left:3px;"></span></button>
-      <button class="pos-btn" data-pos="mid-center"><span class="dot" style="top:50%;left:50%;transform:translate(-50%,-50%);"></span></button>
-      <button class="pos-btn" data-pos="mid-right"><span class="dot" style="top:50%;transform:translateY(-50%);right:3px;"></span></button>
-      <button class="pos-btn" data-pos="bot-left"><span class="dot" style="bottom:3px;left:3px;"></span></button>
-      <button class="pos-btn" data-pos="bot-center"><span class="dot" style="bottom:3px;left:50%;transform:translateX(-50%);"></span></button>
-      <button class="pos-btn" data-pos="bot-right"><span class="dot" style="bottom:3px;right:3px;"></span></button>
+    <!-- LOGO panel -->
+    <div class="panel" id="panel-logo">
+      <div class="row">
+        <div class="upload-box" id="uploadBox">
+          <span class="material-symbols-outlined" style="font-size:24px;color:var(--muted);display:block;margin-bottom:3px;">upload_file</span>
+          <p style="font-size:12px;font-weight:600;color:var(--muted);">Tap to upload logo</p>
+          <p style="font-size:10px;color:#9ca3af;margin-top:2px;">PNG · JPG · SVG · WebP</p>
+          <input type="file" id="logoFile" accept="image/*" style="display:none;"/>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Size</div>
+        <div class="sl">
+          <span class="material-symbols-outlined sl-ico">photo_size_select_small</span>
+          <input type="range" id="logoSize" min="20" max="180" value="50"/>
+          <span class="material-symbols-outlined sl-ico">photo_size_select_large</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lbl">Position</div>
+        <div class="pgrid" id="posGrid">
+          <button class="pbtn" data-p="tl"><span class="pdot" style="top:3px;left:3px;"></span></button>
+          <button class="pbtn" data-p="tc"><span class="pdot" style="top:3px;left:50%;transform:translateX(-50%);"></span></button>
+          <button class="pbtn" data-p="tr"><span class="pdot" style="top:3px;right:3px;"></span></button>
+          <button class="pbtn" data-p="ml"><span class="pdot" style="top:50%;transform:translateY(-50%);left:3px;"></span></button>
+          <button class="pbtn" data-p="mc"><span class="pdot" style="top:50%;left:50%;transform:translate(-50%,-50%);"></span></button>
+          <button class="pbtn" data-p="mr"><span class="pdot" style="top:50%;transform:translateY(-50%);right:3px;"></span></button>
+          <button class="pbtn" data-p="bl"><span class="pdot" style="bottom:3px;left:3px;"></span></button>
+          <button class="pbtn" data-p="bc"><span class="pdot" style="bottom:3px;left:50%;transform:translateX(-50%);"></span></button>
+          <button class="pbtn" data-p="br"><span class="pdot" style="bottom:3px;right:3px;"></span></button>
+        </div>
+        <p style="font-size:9px;color:var(--muted);text-align:center;margin-top:5px;">Or drag the logo on the card ↑</p>
+      </div>
+      <button class="rmvbtn" id="rmvLogo" style="display:none;">🗑 Remove Logo</button>
     </div>
-    <p style="font-size:10px;color:var(--muted);text-align:center;margin:7px 0 4px;">Or drag the logo directly on the card ↑</p>
-    <button id="removeLogoBtn" class="remove-btn" style="display:none;">🗑 Remove Logo</button>
-  </div>
-</div>
 
+  </div><!-- /panelWrap -->
+</div><!-- /bottom -->
 
 <script>
-// ─── DATA ────────────────────────────────────────────────────────────────────
+// ─── STATE ───────────────────────────────────────────────────────────────────
 
-const defaultCard = () => ({
+const mk = () => ({
   title: "FlashCard Maker",
-  content: "Tap Header or Content to edit. Changes appear live above!",
+  content: "Tap a tab to edit. Watch changes live above!",
   watermark: "",
-  headerFont: "elegant",  headerSize: 28, headerColor: "#ffffff",
-  headerAlign: "center",  headerBold: true, headerItalic: false,
-  contentFont: "display", contentSize: 12, contentColor: "#ffffff",
-  contentAlign: "center", contentBold: false, contentItalic: false,
-  contentVAlign: "center",
-  bg: "violet-fuchsia",
-  aspect: "aspect-3-4",
-  borderWidth: "4", borderColor: "transparent",
-  showDivider: false,
-  logoSrc: null, logoSize: 60, logoX: 12, logoY: 12,
+  hFont:"elegant", hSize:20, hColor:"#ffffff", hAlign:"center", hBold:true, hItalic:false,
+  cFont:"display",  cSize:10, cColor:"#ffffff", cAlign:"center", cBold:false, cItalic:false,
+  cVA:"center",
+  bg:"vf", aspect:"aspect-3-4",
+  bw:"4", bc:"transparent",
+  div:false,
+  logo:null, lsz:50, lx:10, ly:10,
 });
 
-let cards = [defaultCard()];
-let currentIdx = 0;
-let activeSheet = null;
+let cards=[mk()], idx=0;
 
-// ─── GRADIENT DATA ─────────────────────────────────────────────────────────────
+// ─── GRADIENTS ───────────────────────────────────────────────────────────────
 
-const BG = [
-  { id:"violet-fuchsia", css:"linear-gradient(135deg,#7c3aed,#c026d3)" },
-  { id:"blue-cyan",      css:"linear-gradient(135deg,#2563eb,#06b6d4)" },
-  { id:"rose-orange",    css:"linear-gradient(135deg,#f43f5e,#f97316)" },
-  { id:"emerald-teal",   css:"linear-gradient(135deg,#10b981,#0d9488)" },
-  { id:"amber-rose",     css:"linear-gradient(135deg,#fbbf24,#f43f5e)" },
-  { id:"indigo-purple",  css:"linear-gradient(135deg,#4f46e5,#7e22ce)" },
-  { id:"sky-indigo",     css:"linear-gradient(135deg,#0ea5e9,#4f46e5)" },
-  { id:"pink-rose",      css:"linear-gradient(135deg,#ec4899,#f43f5e)" },
-  { id:"lime-emerald",   css:"linear-gradient(135deg,#84cc16,#059669)" },
-  { id:"fuchsia-pink",   css:"linear-gradient(135deg,#c026d3,#ec4899)" },
-  { id:"orange-amber",   css:"linear-gradient(135deg,#f97316,#f59e0b)" },
-  { id:"slate-dark",     css:"linear-gradient(135deg,#334155,#0f172a)" },
-  { id:"gray-black",     css:"linear-gradient(135deg,#1f2937,#000000)" },
-  { id:"teal-cyan",      css:"linear-gradient(135deg,#2dd4bf,#0891b2)" },
-  { id:"red-rose",       css:"linear-gradient(135deg,#dc2626,#9f1239)" },
-  { id:"yellow-orange",  css:"linear-gradient(135deg,#facc15,#ea580c)" },
-  { id:"blue-violet",    css:"linear-gradient(135deg,#3b82f6,#7c3aed)" },
-  { id:"green-lime",     css:"linear-gradient(135deg,#22c55e,#a3e635)" },
-];
-const getBgCss = id => (BG.find(b => b.id === id) || BG[0]).css;
-
-// ─── FONTS ─────────────────────────────────────────────────────────────────────
-
-const FONTS = [
-  { cls:"elegant", label:"Playfair", css:"'Playfair Display',serif" },
-  { cls:"lora",    label:"Lora",     css:"'Lora',serif" },
-  { cls:"dm",      label:"DM Serif", css:"'DM Serif Display',serif" },
-  { cls:"display", label:"Inter",    css:"'Inter',sans-serif" },
-  { cls:"grotesk", label:"Grotesk",  css:"'Space Grotesk',sans-serif" },
-  { cls:"mono",    label:"Mono",     css:"'Roboto Mono',monospace" },
-  { cls:"syne",    label:"Syne",     css:"'Syne',sans-serif" },
-];
-const getFontCss = cls => (FONTS.find(f => f.cls === cls) || FONTS[0]).css;
-
-// ─── COLORS ────────────────────────────────────────────────────────────────────
-
-const TEXT_COLORS = [
-  "#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd",
-  "#fbcfe8","#374151","#1f2937","#000000","#dc2626","#ea580c","#ca8a04",
-  "#16a34a","#2563eb","#7c3aed","#db2777","#0891b2","#0d9488",
-];
-const BORDER_COLORS = [
-  "#ffffff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd","#fbcfe8",
-  "#000000","#1f2937","#374151","#dc2626","#ea580c","#ca8a04","#16a34a",
-  "#2563eb","#7c3aed","#db2777","#f97316","#10b981","#06b6d4",
-];
-
-// ─── ELEMENTS ──────────────────────────────────────────────────────────────────
-
-const $ = id => document.getElementById(id);
-
-const cardPreview    = $('cardPreview');
-const bgLayer        = $('bgLayer');
-const previewTitle   = $('previewTitle');
-const previewContent = $('previewContent');
-const previewDivider = $('previewDivider');
-const contentBlock   = $('contentBlock');
-const watermarkEl    = $('watermarkEl');
-const logoOverlay    = $('logoOverlay');
-const logoImg        = $('logoImg');
-const cardCounter    = $('cardCounter');
-const dotIndicators  = $('dotIndicators');
-
-// Sheet size classes map
-const SHEET_SIZE = {
-  header: 'sheet-xl', content: 'sheet-xl',
-  bg: 'sheet-md', border: 'sheet-lg',
-  aspect: 'sheet-sm', logo: 'sheet-xl',
+const BG={
+  vf:"linear-gradient(135deg,#7c3aed,#c026d3)",
+  bc:"linear-gradient(135deg,#2563eb,#06b6d4)",
+  ro:"linear-gradient(135deg,#f43f5e,#f97316)",
+  et:"linear-gradient(135deg,#10b981,#0d9488)",
+  ar:"linear-gradient(135deg,#fbbf24,#f43f5e)",
+  ip:"linear-gradient(135deg,#4f46e5,#7e22ce)",
+  si:"linear-gradient(135deg,#0ea5e9,#4f46e5)",
+  pr:"linear-gradient(135deg,#ec4899,#f43f5e)",
+  le:"linear-gradient(135deg,#84cc16,#059669)",
+  fp:"linear-gradient(135deg,#c026d3,#ec4899)",
+  oa:"linear-gradient(135deg,#f97316,#f59e0b)",
+  sd:"linear-gradient(135deg,#334155,#0f172a)",
+  gb:"linear-gradient(135deg,#1f2937,#000000)",
+  tc:"linear-gradient(135deg,#2dd4bf,#0891b2)",
+  rr:"linear-gradient(135deg,#dc2626,#9f1239)",
+  yo:"linear-gradient(135deg,#facc15,#ea580c)",
+  bv:"linear-gradient(135deg,#3b82f6,#7c3aed)",
+  gl:"linear-gradient(135deg,#22c55e,#a3e635)",
 };
+const gbg = id => BG[id]||BG.vf;
 
-// ─── SHEET MANAGEMENT ──────────────────────────────────────────────────────────
+// ─── FONTS ───────────────────────────────────────────────────────────────────
 
-function openSheet(name) {
-  // Close any open sheet
-  if (activeSheet) {
-    $(`${activeSheet}Sheet`).classList.remove('open');
-    document.body.classList.remove('sheet-sm','sheet-md','sheet-lg','sheet-xl');
-  }
-  $(`${name}Sheet`).classList.add('open');
-  document.body.classList.add(SHEET_SIZE[name]);
-  activeSheet = name;
-}
+const FONTS=[
+  {k:"elegant",l:"Playfair",c:"'Playfair Display',serif"},
+  {k:"lora",   l:"Lora",    c:"'Lora',serif"},
+  {k:"dm",     l:"DM Serif",c:"'DM Serif Display',serif"},
+  {k:"display",l:"Inter",   c:"'Inter',sans-serif"},
+  {k:"grotesk",l:"Grotesk", c:"'Space Grotesk',sans-serif"},
+  {k:"mono",   l:"Mono",    c:"'Roboto Mono',monospace"},
+  {k:"syne",   l:"Syne",    c:"'Syne',sans-serif"},
+];
+const gfc = k => (FONTS.find(f=>f.k===k)||FONTS[0]).c;
 
-function closeSheet(name) {
-  $(`${name}Sheet`).classList.remove('open');
-  document.body.classList.remove('sheet-sm','sheet-md','sheet-lg','sheet-xl');
-  activeSheet = null;
-}
+// ─── COLORS ──────────────────────────────────────────────────────────────────
 
-function closeAll() {
-  ['header','content','bg','border','aspect','logo'].forEach(n => {
-    $(`${n}Sheet`).classList.remove('open');
-  });
-  document.body.classList.remove('sheet-sm','sheet-md','sheet-lg','sheet-xl');
-  activeSheet = null;
-}
+const TXT_C=["#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd",
+  "#fbcfe8","#374151","#1f2937","#000000","#dc2626","#ea580c","#ca8a04",
+  "#16a34a","#2563eb","#7c3aed","#db2777","#0891b2","#0d9488"];
 
-$('closeHeader').onclick  = () => closeSheet('header');
-$('closeContent').onclick = () => closeSheet('content');
-$('closeBg').onclick      = () => closeSheet('bg');
-$('closeBorder').onclick  = () => closeSheet('border');
-$('closeAspect').onclick  = () => closeSheet('aspect');
-$('closeLogo').onclick    = () => closeSheet('logo');
+const BDR_C=["#ffffff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd","#fbcfe8",
+  "#000000","#1f2937","#374151","#dc2626","#ea580c","#ca8a04","#16a34a",
+  "#2563eb","#7c3aed","#db2777","#f97316","#10b981","#06b6d4"];
 
-// ─── RENDER ────────────────────────────────────────────────────────────────────
+// ─── ELEMENTS ────────────────────────────────────────────────────────────────
 
-function render() {
-  const c = cards[currentIdx];
+const $=id=>document.getElementById(id);
+const CP=$('cardPreview'), BGL=$('bgLayer'), PT=$('previewTitle'),
+      PC=$('previewContent'), PD=$('previewDivider'), CB=$('contentBlock'),
+      WM=$('watermarkEl'), LO=$('logoOverlay'), LI=$('logoImg'),
+      CC=$('cardCounter');
 
-  bgLayer.style.background = getBgCss(c.bg);
+// ─── RENDER ──────────────────────────────────────────────────────────────────
 
-  cardPreview.classList.remove('aspect-1-1','aspect-3-4','aspect-4-3','aspect-16-9','aspect-9-16');
-  cardPreview.classList.add(c.aspect);
+function render(){
+  const c=cards[idx];
+  BGL.style.background = gbg(c.bg);
 
-  cardPreview.style.borderWidth = c.borderWidth === '0' ? '0' : c.borderWidth + 'px';
-  cardPreview.style.borderStyle = 'solid';
-  cardPreview.style.borderColor = c.borderColor;
+  CP.classList.remove('aspect-1-1','aspect-3-4','aspect-4-3','aspect-16-9','aspect-9-16');
+  CP.classList.add(c.aspect);
+  CP.style.borderWidth = c.bw==='0'?'0':c.bw+'px';
+  CP.style.borderStyle = 'solid';
+  CP.style.borderColor = c.bc;
 
-  // Header
-  previewTitle.textContent        = c.title || '';
-  previewTitle.style.fontFamily   = getFontCss(c.headerFont);
-  previewTitle.style.fontSize     = c.headerSize + 'px';
-  previewTitle.style.color        = c.headerColor;
-  previewTitle.style.textAlign    = c.headerAlign;
-  previewTitle.style.fontWeight   = c.headerBold   ? '700' : '400';
-  previewTitle.style.fontStyle    = c.headerItalic ? 'italic' : 'normal';
+  PT.textContent = c.title||'';
+  PT.style.fontFamily = gfc(c.hFont);
+  PT.style.fontSize = c.hSize+'px';
+  PT.style.color = c.hColor;
+  PT.style.textAlign = c.hAlign;
+  PT.style.fontWeight = c.hBold?'700':'400';
+  PT.style.fontStyle = c.hItalic?'italic':'normal';
 
-  previewDivider.style.display = c.showDivider ? 'block' : 'none';
+  PD.style.display = c.div?'block':'none';
 
-  // Content
-  previewContent.textContent        = c.content || '';
-  previewContent.style.fontFamily   = getFontCss(c.contentFont);
-  previewContent.style.fontSize     = c.contentSize + 'px';
-  previewContent.style.color        = c.contentColor;
-  previewContent.style.textAlign    = c.contentAlign;
-  previewContent.style.fontWeight   = c.contentBold   ? '700' : '400';
-  previewContent.style.fontStyle    = c.contentItalic ? 'italic' : 'normal';
-  contentBlock.style.justifyContent =
-    c.contentVAlign === 'top' ? 'flex-start' :
-    c.contentVAlign === 'bottom' ? 'flex-end' : 'center';
+  PC.textContent = c.content||'';
+  PC.style.fontFamily = gfc(c.cFont);
+  PC.style.fontSize = c.cSize+'px';
+  PC.style.color = c.cColor;
+  PC.style.textAlign = c.cAlign;
+  PC.style.fontWeight = c.cBold?'700':'400';
+  PC.style.fontStyle = c.cItalic?'italic':'normal';
+  CB.style.justifyContent = c.cVA==='top'?'flex-start':c.cVA==='bottom'?'flex-end':'center';
+  CB.style.alignItems = 'initial';
 
-  // Watermark
-  watermarkEl.textContent    = c.watermark || '';
-  watermarkEl.style.display  = c.watermark ? 'block' : 'none';
+  WM.textContent = c.watermark||'';
+  WM.style.display = c.watermark?'block':'none';
 
-  // Logo
-  if (c.logoSrc) {
-    logoImg.src              = c.logoSrc;
-    logoImg.style.width      = c.logoSize + 'px';
-    logoOverlay.style.left   = c.logoX + 'px';
-    logoOverlay.style.top    = c.logoY + 'px';
-    logoOverlay.style.display= 'block';
-    $('removeLogoBtn').style.display = 'block';
+  if(c.logo){
+    LI.src=c.logo; LI.style.width=c.lsz+'px';
+    LO.style.left=c.lx+'px'; LO.style.top=c.ly+'px';
+    LO.style.display='block';
+    $('rmvLogo').style.display='block';
   } else {
-    logoOverlay.style.display= 'none';
-    $('removeLogoBtn').style.display = 'none';
+    LO.style.display='none';
+    $('rmvLogo').style.display='none';
   }
 
-  // Multi-card
-  const multi = cards.length > 1;
-  cardPreview.classList.toggle('has-multiple', multi);
-  cardCounter.style.display = multi ? 'block' : 'none';
-  if (multi) cardCounter.textContent = `${currentIdx+1}/${cards.length}`;
-  dotIndicators.style.display = multi ? 'flex' : 'none';
-  $('prevOverlay').disabled = currentIdx === 0;
-  $('nextOverlay').disabled = currentIdx === cards.length - 1;
+  const multi=cards.length>1;
+  CP.classList.toggle('has-multiple',multi);
+  CC.style.display=multi?'block':'none';
+  if(multi) CC.textContent=`${idx+1}/${cards.length}`;
+  $('prevOverlay').disabled=idx===0;
+  $('nextOverlay').disabled=idx===cards.length-1;
   renderDots();
 }
 
-function renderDots() {
-  dotIndicators.innerHTML = '';
-  cards.forEach((_, i) => {
-    const d = document.createElement('div');
-    const active = i === currentIdx;
-    d.style.cssText = `width:${active?'17px':'6px'};height:6px;border-radius:4px;background:${active?'var(--primary)':'#c7d2fe'};transition:all 0.22s;cursor:pointer;`;
-    d.onclick = () => { currentIdx = i; render(); };
-    dotIndicators.appendChild(d);
+function renderDots(){
+  const d=$('dots'); d.innerHTML='';
+  cards.forEach((_,i)=>{
+    const el=document.createElement('div');
+    const a=i===idx;
+    el.style.cssText=`width:${a?'14px':'5px'};height:5px;border-radius:3px;background:${a?'var(--accent)':'#c7d2fe'};transition:all .2s;cursor:pointer;`;
+    el.onclick=()=>{idx=i;render();};
+    d.appendChild(el);
   });
 }
 
-// ─── BUILD HELPERS ─────────────────────────────────────────────────────────────
+// ─── TABS ────────────────────────────────────────────────────────────────────
 
-function buildFontRow(cid, current, onPick) {
-  const row = $(cid); row.innerHTML = '';
-  FONTS.forEach(f => {
-    const b = document.createElement('button');
-    b.className = 'font-pill' + (f.cls === current ? ' active' : '');
-    b.textContent = f.label;
-    b.style.fontFamily = f.css;
-    b.onclick = () => {
-      onPick(f.cls);
-      row.querySelectorAll('.font-pill').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+let activeTab='header';
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const tab=t.dataset.tab;
+    if(tab==='new'){
+      addCard(); return;
+    }
+    // deactivate all
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    $(`panel-${tab}`).classList.add('active');
+    activeTab=tab;
+  });
+});
+
+function addCard(){
+  const c=cards[idx];
+  const n=mk();
+  Object.assign(n,{
+    bg:c.bg,aspect:c.aspect,
+    hFont:c.hFont,hColor:c.hColor,
+    cFont:c.cFont,cColor:c.cColor,
+    bw:c.bw,bc:c.bc,
+    title:'',content:'',
+  });
+  cards.push(n);
+  idx=cards.length-1;
+  render();
+}
+
+// ─── BUILD UI ────────────────────────────────────────────────────────────────
+
+function mkFonts(cid, getCur, onPick){
+  const r=$(cid); r.innerHTML='';
+  FONTS.forEach(f=>{
+    const b=document.createElement('button');
+    b.className='fpill'+(f.k===getCur()?' on':'');
+    b.textContent=f.l;
+    b.style.fontFamily=f.c;
+    b.onclick=()=>{
+      onPick(f.k);
+      r.querySelectorAll('.fpill').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
       render();
     };
-    row.appendChild(b);
+    r.appendChild(b);
   });
 }
 
-function buildColors(cid, palette, current, onPick) {
-  const row = $(cid); row.innerHTML = '';
-  palette.forEach(col => {
-    const sw = document.createElement('button');
-    sw.className = 'swatch' + (col === current ? ' sel' : '');
-    sw.style.background = col;
-    if (['#ffffff','#f8f4ff','#fde68a','#f8fafc','#fbcfe8'].includes(col))
-      sw.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.14)';
-    sw.onclick = () => {
+function mkColors(cid, pal, getCur, onPick){
+  const r=$(cid); r.innerHTML='';
+  pal.forEach(col=>{
+    const s=document.createElement('button');
+    s.className='csw'+(col===getCur()?' on':'');
+    s.style.background=col;
+    const light=['#ffffff','#f8f4ff','#fde68a','#f8fafc','#fbcfe8','#fca5a5'];
+    if(light.includes(col)) s.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.13)';
+    s.onclick=()=>{
       onPick(col);
-      row.querySelectorAll('.swatch').forEach(x => x.classList.remove('sel'));
-      sw.classList.add('sel');
+      r.querySelectorAll('.csw').forEach(x=>x.classList.remove('on'));
+      s.classList.add('on');
       render();
     };
-    row.appendChild(sw);
+    r.appendChild(s);
   });
 }
 
-function buildBg() {
-  const row = $('bgPickerRow'); row.innerHTML = '';
-  const c = cards[currentIdx];
-  BG.forEach(bg => {
-    const p = document.createElement('button');
-    p.className = 'bg-pill' + (bg.id === c.bg ? ' sel' : '');
-    p.style.background = bg.css;
-    p.onclick = () => {
-      cards[currentIdx].bg = bg.id;
-      row.querySelectorAll('.bg-pill').forEach(x => x.classList.remove('sel'));
-      p.classList.add('sel');
+function mkBg(){
+  const r=$('bgRow'); r.innerHTML='';
+  Object.keys(BG).forEach(id=>{
+    const p=document.createElement('button');
+    p.className='bgpill'+(id===cards[idx].bg?' on':'');
+    p.style.background=BG[id];
+    p.onclick=()=>{
+      cards[idx].bg=id;
+      r.querySelectorAll('.bgpill').forEach(x=>x.classList.remove('on'));
+      p.classList.add('on');
       render();
     };
-    row.appendChild(p);
+    r.appendChild(p);
   });
 }
 
-function buildAspect() {
-  const ASPECTS = [
-    { cls:"aspect-1-1",  label:"1:1",  icon:"crop_square" },
-    { cls:"aspect-3-4",  label:"3:4",  icon:"crop_portrait" },
-    { cls:"aspect-4-3",  label:"4:3",  icon:"crop_landscape" },
-    { cls:"aspect-16-9", label:"16:9", icon:"crop_16_9" },
-    { cls:"aspect-9-16", label:"9:16", icon:"stay_current_portrait" },
-  ];
-  const row = $('aspectRow'); row.innerHTML = '';
-  ASPECTS.forEach(a => {
-    const b = document.createElement('button');
-    b.className = 'ibtn' + (a.cls === cards[currentIdx].aspect ? ' active' : '');
-    b.innerHTML = `<span class="material-symbols-outlined">${a.icon}</span><span>${a.label}</span>`;
-    b.onclick = () => { cards[currentIdx].aspect = a.cls; closeSheet('aspect'); render(); };
-    row.appendChild(b);
-  });
-}
-
-function buildBorder() {
-  const c = cards[currentIdx];
-  const wr = $('borderWidthRow'); wr.innerHTML = '';
-  [['0','None'],['4','Thin'],['8','Med'],['14','Thick']].forEach(([w, lbl]) => {
-    const b = document.createElement('button');
-    b.className = 'ibtn' + (c.borderWidth === w ? ' active' : '');
-    b.innerHTML = `<span style="font-size:10px;">${lbl}</span>`;
-    b.onclick = () => {
-      cards[currentIdx].borderWidth = w;
-      wr.querySelectorAll('.ibtn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+function mkBorder(){
+  const c=cards[idx];
+  const wr=$('bwRow'); wr.innerHTML='';
+  [['0','None'],['4','Thin'],['8','Med'],['14','Thick']].forEach(([w,l])=>{
+    const b=document.createElement('button');
+    b.className='bbtn'+(c.bw===w?' on':'');
+    b.innerHTML=`<span style="font-size:10px;">${l}</span>`;
+    b.onclick=()=>{
+      cards[idx].bw=w;
+      wr.querySelectorAll('.bbtn').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
       render();
     };
     wr.appendChild(b);
   });
-  buildColors('borderColorRow', BORDER_COLORS, c.borderColor, col => {
-    cards[currentIdx].borderColor = col;
+  mkColors('bcRow',BDR_C,()=>c.bc,col=>{cards[idx].bc=col;});
+}
+
+function mkRatio(){
+  const r=$('ratioRow'); r.innerHTML='';
+  [
+    {cls:'aspect-1-1',l:'1:1',ic:'crop_square'},
+    {cls:'aspect-3-4',l:'3:4',ic:'crop_portrait'},
+    {cls:'aspect-4-3',l:'4:3',ic:'crop_landscape'},
+    {cls:'aspect-16-9',l:'16:9',ic:'crop_16_9'},
+    {cls:'aspect-9-16',l:'9:16',ic:'stay_current_portrait'},
+  ].forEach(a=>{
+    const b=document.createElement('button');
+    b.className='bbtn'+(a.cls===cards[idx].aspect?' on':'');
+    b.innerHTML=`<span class="material-symbols-outlined">${a.ic}</span><span>${a.l}</span>`;
+    b.onclick=()=>{
+      cards[idx].aspect=a.cls;
+      r.querySelectorAll('.bbtn').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      render();
+    };
+    r.appendChild(b);
   });
 }
 
-// ─── TOOLBAR ───────────────────────────────────────────────────────────────────
+// Build everything on open
+function refreshPanels(){
+  const c=cards[idx];
 
-document.querySelectorAll('[data-action]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const a = btn.dataset.action;
-    const c = cards[currentIdx];
+  // header
+  $('titleInput').value=c.title;
+  $('hSize').value=c.hSize;
+  $('hBold').classList.toggle('on',c.hBold);
+  $('hItalic').classList.toggle('on',c.hItalic);
+  $('divToggle').checked=c.div;
+  document.querySelectorAll('[data-ah]').forEach(b=>b.classList.toggle('on',b.dataset.ah===c.hAlign));
+  mkFonts('hFontRow',()=>c.hFont,k=>{cards[idx].hFont=k;});
+  mkColors('hColorRow',TXT_C,()=>c.hColor,col=>{cards[idx].hColor=col;});
 
-    if (a === 'editHeader') {
-      $('titleInput').value = c.title;
-      $('headerSizeSlider').value = c.headerSize;
-      $('dividerToggle').checked = c.showDivider;
-      $('headerBoldBtn').classList.toggle('active', c.headerBold);
-      $('headerItalicBtn').classList.toggle('active', c.headerItalic);
-      document.querySelectorAll('[data-align-header]').forEach(b =>
-        b.classList.toggle('active', b.dataset.alignHeader === c.headerAlign));
-      buildFontRow('headerFontRow', c.headerFont, f => { cards[currentIdx].headerFont = f; });
-      buildColors('headerColorRow', TEXT_COLORS, c.headerColor, col => { cards[currentIdx].headerColor = col; });
-      openSheet('header');
-    }
-    else if (a === 'editContent') {
-      $('contentInput').value = c.content;
-      $('watermarkInput').value = c.watermark;
-      $('contentSizeSlider').value = c.contentSize;
-      $('contentBoldBtn').classList.toggle('active', c.contentBold);
-      $('contentItalicBtn').classList.toggle('active', c.contentItalic);
-      document.querySelectorAll('[data-align-content]').forEach(b =>
-        b.classList.toggle('active', b.dataset.alignContent === c.contentAlign));
-      document.querySelectorAll('[data-valign]').forEach(b =>
-        b.classList.toggle('active', b.dataset.valign === c.contentVAlign));
-      buildFontRow('contentFontRow', c.contentFont, f => { cards[currentIdx].contentFont = f; });
-      buildColors('contentColorRow', TEXT_COLORS, c.contentColor, col => { cards[currentIdx].contentColor = col; });
-      openSheet('content');
-    }
-    else if (a === 'bgColor')  { buildBg();      openSheet('bg'); }
-    else if (a === 'border')   { buildBorder();   openSheet('border'); }
-    else if (a === 'aspect')   { buildAspect();   openSheet('aspect'); }
-    else if (a === 'logo') {
-      $('logoSizeSlider').value = c.logoSize || 60;
-      openSheet('logo');
-    }
-    else if (a === 'addCard') {
-      const n = defaultCard();
-      Object.assign(n, {
-        bg: c.bg, aspect: c.aspect,
-        headerFont: c.headerFont, headerColor: c.headerColor,
-        contentFont: c.contentFont, contentColor: c.contentColor,
-        borderWidth: c.borderWidth, borderColor: c.borderColor,
-        title: '', content: '',
-      });
-      cards.push(n);
-      currentIdx = cards.length - 1;
-      closeAll();
-      render();
-    }
-  });
-});
+  // content
+  $('contentInput').value=c.content;
+  $('cSize').value=c.cSize;
+  $('wmInput').value=c.watermark;
+  $('cBold').classList.toggle('on',c.cBold);
+  $('cItalic').classList.toggle('on',c.cItalic);
+  document.querySelectorAll('[data-ac]').forEach(b=>b.classList.toggle('on',b.dataset.ac===c.cAlign));
+  document.querySelectorAll('[data-va]').forEach(b=>b.classList.toggle('on',b.dataset.va===c.cVA));
+  mkFonts('cFontRow',()=>c.cFont,k=>{cards[idx].cFont=k;});
+  mkColors('cColorRow',TXT_C,()=>c.cColor,col=>{cards[idx].cColor=col;});
 
-// ─── LIVE INPUTS ───────────────────────────────────────────────────────────────
+  mkBg();
+  mkBorder();
+  mkRatio();
+  $('logoSize').value=c.lsz;
+}
 
-$('titleInput').oninput    = e => { cards[currentIdx].title     = e.target.value; render(); };
-$('contentInput').oninput  = e => { cards[currentIdx].content   = e.target.value; render(); };
-$('watermarkInput').oninput= e => { cards[currentIdx].watermark = e.target.value; render(); };
+// ─── LIVE INPUTS ─────────────────────────────────────────────────────────────
 
-$('headerSizeSlider').oninput  = e => { cards[currentIdx].headerSize  = +e.target.value; render(); };
-$('contentSizeSlider').oninput = e => { cards[currentIdx].contentSize = +e.target.value; render(); };
+$('titleInput').oninput=e=>{cards[idx].title=e.target.value;render();};
+$('contentInput').oninput=e=>{cards[idx].content=e.target.value;render();};
+$('wmInput').oninput=e=>{cards[idx].watermark=e.target.value;render();};
+$('hSize').oninput=e=>{cards[idx].hSize=+e.target.value;render();};
+$('cSize').oninput=e=>{cards[idx].cSize=+e.target.value;render();};
+$('divToggle').onchange=e=>{cards[idx].div=e.target.checked;render();};
 
-$('dividerToggle').onchange = e => { cards[currentIdx].showDivider = e.target.checked; render(); };
-
-const toggle = (id, key) => {
-  $(id).onclick = () => {
-    cards[currentIdx][key] = !cards[currentIdx][key];
-    $(id).classList.toggle('active', cards[currentIdx][key]);
+const tog=(id,key)=>{
+  $(id).onclick=()=>{
+    cards[idx][key]=!cards[idx][key];
+    $(id).classList.toggle('on',cards[idx][key]);
     render();
   };
 };
-toggle('headerBoldBtn',    'headerBold');
-toggle('headerItalicBtn',  'headerItalic');
-toggle('contentBoldBtn',   'contentBold');
-toggle('contentItalicBtn', 'contentItalic');
+tog('hBold','hBold'); tog('hItalic','hItalic');
+tog('cBold','cBold'); tog('cItalic','cItalic');
 
-document.querySelectorAll('[data-align-header]').forEach(b => {
-  b.onclick = () => {
-    cards[currentIdx].headerAlign = b.dataset.alignHeader;
-    document.querySelectorAll('[data-align-header]').forEach(x => x.classList.remove('active'));
-    b.classList.add('active'); render();
+document.querySelectorAll('[data-ah]').forEach(b=>{
+  b.onclick=()=>{
+    cards[idx].hAlign=b.dataset.ah;
+    document.querySelectorAll('[data-ah]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); render();
   };
 });
-document.querySelectorAll('[data-align-content]').forEach(b => {
-  b.onclick = () => {
-    cards[currentIdx].contentAlign = b.dataset.alignContent;
-    document.querySelectorAll('[data-align-content]').forEach(x => x.classList.remove('active'));
-    b.classList.add('active'); render();
+document.querySelectorAll('[data-ac]').forEach(b=>{
+  b.onclick=()=>{
+    cards[idx].cAlign=b.dataset.ac;
+    document.querySelectorAll('[data-ac]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); render();
   };
 });
-document.querySelectorAll('[data-valign]').forEach(b => {
-  b.onclick = () => {
-    cards[currentIdx].contentVAlign = b.dataset.valign;
-    document.querySelectorAll('[data-valign]').forEach(x => x.classList.remove('active'));
-    b.classList.add('active'); render();
+document.querySelectorAll('[data-va]').forEach(b=>{
+  b.onclick=()=>{
+    cards[idx].cVA=b.dataset.va;
+    document.querySelectorAll('[data-va]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); render();
   };
 });
 
-// ─── LOGO ──────────────────────────────────────────────────────────────────────
+// ─── LOGO ────────────────────────────────────────────────────────────────────
 
-$('logoUploadArea').onclick = () => $('logoFileInput').click();
-$('logoFileInput').onchange = () => {
-  if ($('logoFileInput').files[0]) loadLogo($('logoFileInput').files[0]);
+$('uploadBox').onclick=()=>$('logoFile').click();
+$('logoFile').onchange=()=>{
+  const f=$('logoFile').files[0];
+  if(f){ const r=new FileReader(); r.onload=e=>{Object.assign(cards[idx],{logo:e.target.result,lsz:50,lx:10,ly:10}); render();}; r.readAsDataURL(f); }
 };
+$('logoSize').oninput=e=>{cards[idx].lsz=+e.target.value;render();};
+$('rmvLogo').onclick=()=>{cards[idx].logo=null;render();};
 
-function loadLogo(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    Object.assign(cards[currentIdx], { logoSrc: e.target.result, logoSize: 60, logoX: 12, logoY: 12 });
-    render(); closeSheet('logo');
-  };
-  reader.readAsDataURL(file);
-}
-
-$('logoSizeSlider').oninput = e => { cards[currentIdx].logoSize = +e.target.value; render(); };
-$('removeLogoBtn').onclick  = () => { cards[currentIdx].logoSrc = null; render(); };
-
-// Position presets
-document.querySelectorAll('[data-pos]').forEach(btn => {
-  btn.onclick = () => {
-    const c = cards[currentIdx];
-    const W = cardPreview.offsetWidth, H = cardPreview.offsetHeight;
-    const lw = c.logoSize || 60;
-    const lh = logoImg.naturalHeight ? (lw / logoImg.naturalWidth) * logoImg.naturalHeight : lw;
-    const p = 10;
-    const POS = {
-      'top-left':   {x:p, y:p},        'top-center': {x:(W-lw)/2, y:p},       'top-right': {x:W-lw-p, y:p},
-      'mid-left':   {x:p, y:(H-lh)/2}, 'mid-center': {x:(W-lw)/2, y:(H-lh)/2},'mid-right': {x:W-lw-p, y:(H-lh)/2},
-      'bot-left':   {x:p, y:H-lh-p},   'bot-center': {x:(W-lw)/2, y:H-lh-p},  'bot-right': {x:W-lw-p, y:H-lh-p},
-    }[btn.dataset.pos];
-    if (POS) {
-      cards[currentIdx].logoX = Math.max(0, POS.x);
-      cards[currentIdx].logoY = Math.max(0, POS.y);
-      render();
-    }
+document.querySelectorAll('[data-p]').forEach(b=>{
+  b.onclick=()=>{
+    const c=cards[idx];
+    const W=CP.offsetWidth, H=CP.offsetHeight;
+    const lw=c.lsz; const lh=LI.naturalHeight?(lw/LI.naturalWidth)*LI.naturalHeight:lw;
+    const p=8;
+    const POS={tl:{x:p,y:p},tc:{x:(W-lw)/2,y:p},tr:{x:W-lw-p,y:p},
+               ml:{x:p,y:(H-lh)/2},mc:{x:(W-lw)/2,y:(H-lh)/2},mr:{x:W-lw-p,y:(H-lh)/2},
+               bl:{x:p,y:H-lh-p},bc:{x:(W-lw)/2,y:H-lh-p},br:{x:W-lw-p,y:H-lh-p}}[b.dataset.p];
+    if(POS){ cards[idx].lx=Math.max(0,POS.x); cards[idx].ly=Math.max(0,POS.y); render(); }
   };
 });
 
 // Logo drag
-(function() {
-  let drag=false, sx, sy, ox, oy;
-  const start = e => {
-    if (e.target.id==='logoResizeHandle') return;
-    e.preventDefault(); drag=true;
-    const pt = e.touches ? e.touches[0] : e;
-    sx=pt.clientX; sy=pt.clientY;
-    ox=cards[currentIdx].logoX; oy=cards[currentIdx].logoY;
+(()=>{
+  let d=false,sx,sy,ox,oy;
+  const s=e=>{
+    if(e.target.id==='logoResizeHandle')return;
+    e.preventDefault(); d=true;
+    const pt=e.touches?e.touches[0]:e;
+    sx=pt.clientX;sy=pt.clientY;ox=cards[idx].lx;oy=cards[idx].ly;
   };
-  const move = e => {
-    if (!drag) return; e.preventDefault();
-    const pt = e.touches ? e.touches[0] : e;
-    const rect = cardPreview.getBoundingClientRect();
-    const scX = cardPreview.offsetWidth/rect.width;
-    const scY = cardPreview.offsetHeight/rect.height;
-    const lw = cards[currentIdx].logoSize || 60;
-    const nx = Math.max(0, Math.min(ox+(pt.clientX-sx)*scX, cardPreview.offsetWidth-lw));
-    const ny = Math.max(0, Math.min(oy+(pt.clientY-sy)*scY, cardPreview.offsetHeight-24));
-    cards[currentIdx].logoX = nx; cards[currentIdx].logoY = ny;
-    logoOverlay.style.left = nx+'px'; logoOverlay.style.top = ny+'px';
+  const m=e=>{
+    if(!d)return; e.preventDefault();
+    const pt=e.touches?e.touches[0]:e;
+    const rc=CP.getBoundingClientRect();
+    const scx=CP.offsetWidth/rc.width, scy=CP.offsetHeight/rc.height;
+    const lw=cards[idx].lsz;
+    const nx=Math.max(0,Math.min(ox+(pt.clientX-sx)*scx,CP.offsetWidth-lw));
+    const ny=Math.max(0,Math.min(oy+(pt.clientY-sy)*scy,CP.offsetHeight-20));
+    cards[idx].lx=nx;cards[idx].ly=ny;
+    LO.style.left=nx+'px';LO.style.top=ny+'px';
   };
-  const end = () => { drag=false; };
-  logoOverlay.addEventListener('mousedown', start);
-  logoOverlay.addEventListener('touchstart', start, {passive:false});
-  document.addEventListener('mousemove', move);
-  document.addEventListener('touchmove', move, {passive:false});
-  document.addEventListener('mouseup', end);
-  document.addEventListener('touchend', end);
+  const u=()=>{d=false;};
+  LO.addEventListener('mousedown',s);
+  LO.addEventListener('touchstart',s,{passive:false});
+  document.addEventListener('mousemove',m);
+  document.addEventListener('touchmove',m,{passive:false});
+  document.addEventListener('mouseup',u);
+  document.addEventListener('touchend',u);
 })();
 
-// Logo resize
-(function() {
-  let r=false, sx, ss;
-  const h = $('logoResizeHandle');
-  h.addEventListener('mousedown', e => { e.stopPropagation(); r=true; sx=e.clientX; ss=cards[currentIdx].logoSize||60; });
-  document.addEventListener('mousemove', e => {
-    if (!r) return;
-    const ns = Math.max(20, Math.min(ss+(e.clientX-sx), 240));
-    cards[currentIdx].logoSize = ns;
-    logoImg.style.width = ns+'px';
-    $('logoSizeSlider').value = ns;
+// Logo resize handle
+(()=>{
+  let r=false,sx,ss;
+  const h=$('logoResizeHandle');
+  h.addEventListener('mousedown',e=>{e.stopPropagation();r=true;sx=e.clientX;ss=cards[idx].lsz;});
+  document.addEventListener('mousemove',e=>{
+    if(!r)return;
+    const ns=Math.max(16,Math.min(ss+(e.clientX-sx),200));
+    cards[idx].lsz=ns;LI.style.width=ns+'px';$('logoSize').value=ns;
   });
-  document.addEventListener('mouseup', () => { r=false; });
+  document.addEventListener('mouseup',()=>{r=false;});
 })();
 
-// ─── NAVIGATION ────────────────────────────────────────────────────────────────
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
 
-$('prevOverlay').onclick = () => { if (currentIdx>0) { currentIdx--; render(); } };
-$('nextOverlay').onclick = () => { if (currentIdx<cards.length-1) { currentIdx++; render(); } };
+$('prevOverlay').onclick=()=>{if(idx>0){idx--;render();}};
+$('nextOverlay').onclick=()=>{if(idx<cards.length-1){idx++;render();}};
 
-document.addEventListener('keydown', e => {
-  const tag = document.activeElement.tagName;
-  if (tag==='INPUT' || tag==='TEXTAREA') return;
-  if (e.key==='ArrowLeft'  && currentIdx>0)               { currentIdx--; render(); }
-  if (e.key==='ArrowRight' && currentIdx<cards.length-1)  { currentIdx++; render(); }
-  if (e.key==='Escape') closeAll();
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
+  if(e.key==='ArrowLeft'&&idx>0){idx--;render();}
+  if(e.key==='ArrowRight'&&idx<cards.length-1){idx++;render();}
 });
 
-// ─── DOWNLOAD ──────────────────────────────────────────────────────────────────
+// ─── DOWNLOAD ────────────────────────────────────────────────────────────────
 
-$('downloadBtn').addEventListener('click', () => {
-  const hide = [$('downloadBtn'), $('prevOverlay'), $('nextOverlay'), cardCounter];
-  hide.forEach(el => el.style.visibility = 'hidden');
-  html2canvas(cardPreview, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false })
-    .then(canvas => {
-      canvas.toBlob(blob => {
-        const a = document.createElement('a');
-        a.download = (cards[currentIdx].title || 'flashcard') + '.png';
-        a.href = URL.createObjectURL(blob);
+$('downloadBtn').addEventListener('click',()=>{
+  const hide=[$('downloadBtn'),$('prevOverlay'),$('nextOverlay'),CC];
+  hide.forEach(el=>el.style.visibility='hidden');
+  html2canvas(CP,{scale:3,useCORS:true,allowTaint:true,backgroundColor:null,logging:false})
+    .then(canvas=>{
+      canvas.toBlob(blob=>{
+        const a=document.createElement('a');
+        a.download=(cards[idx].title||'flashcard')+'.png';
+        a.href=URL.createObjectURL(blob);
         a.click();
-        hide.forEach(el => el.style.visibility = '');
-      }, 'image/png');
+        hide.forEach(el=>el.style.visibility='');
+      },'image/png');
     });
 });
 
-// ─── INIT ──────────────────────────────────────────────────────────────────────
+// ─── DRAG TO RESIZE SPLIT ────────────────────────────────────────────────────
+
+(()=>{
+  const handle=$('dragHandle');
+  let drag=false, startY, startTopH;
+  handle.addEventListener('touchstart',e=>{
+    drag=true;
+    startY=e.touches[0].clientY;
+    startTopH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h'));
+  },{passive:true});
+  handle.addEventListener('mousedown',e=>{
+    drag=true; startY=e.clientY;
+    startTopH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h'));
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    const dy=e.clientY-startY;
+    const vh=window.innerHeight;
+    const newPct=Math.min(65,Math.max(28,((startTopH/100*vh+dy)/vh)*100));
+    document.documentElement.style.setProperty('--top-h',newPct+'vh');
+    document.documentElement.style.setProperty('--bot-h',(100-newPct)+'vh');
+  });
+  document.addEventListener('touchmove',e=>{
+    if(!drag)return;
+    const dy=e.touches[0].clientY-startY;
+    const vh=window.innerHeight;
+    const newPct=Math.min(65,Math.max(28,((startTopH/100*vh+dy)/vh)*100));
+    document.documentElement.style.setProperty('--top-h',newPct+'vh');
+    document.documentElement.style.setProperty('--bot-h',(100-newPct)+'vh');
+  },{passive:true});
+  const up=()=>{drag=false;};
+  document.addEventListener('mouseup',up);
+  document.addEventListener('touchend',up);
+})();
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+refreshPanels();
 render();
 </script>
 </body>
