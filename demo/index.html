@@ -2,559 +2,437 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>FlashCard Maker</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&family=Merriweather:wght@400;700&family=Space+Grotesk:wght@400;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200" rel="stylesheet"/>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: { primary: "#6366f1" },
-        }
-      }
-    }
-  </script>
-
   <style>
-    :root { --primary: #6366f1; }
-
-    body { min-height: 100dvh; background: #f0efff; }
-
-    /* ── Aspect ratios ── */
-    .aspect-1-1  { aspect-ratio: 1/1; }
-    .aspect-3-4  { aspect-ratio: 3/4; }
-    .aspect-4-3  { aspect-ratio: 4/3; }
-    .aspect-16-9 { aspect-ratio: 16/9; }
-    .aspect-9-16 { aspect-ratio: 9/16; }
-
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-    /* ── Nav arrows — original style ── */
-    .nav-overlay {
-      position: absolute;
-      top: 50%; transform: translateY(-50%);
-      padding: 10px; border-radius: 9999px;
-      background: rgba(0,0,0,0.28); backdrop-filter: blur(8px);
-      color: white; opacity: 0;
-      transition: opacity 0.25s; z-index: 20;
-      cursor: pointer; border: none; display: none;
-    }
-    .has-multiple .nav-overlay { display: block !important; }
-    .has-multiple:hover .nav-overlay { opacity: 0.7; }
-    .has-multiple:hover .nav-overlay:hover { opacity: 1; }
-
-    /* ── Logo overlay ── */
-    #logoOverlay {
-      position: absolute; cursor: grab;
-      user-select: none; z-index: 15; touch-action: none;
-    }
-    #logoOverlay:active { cursor: grabbing; }
-    #logoOverlay img { display: block; border-radius: 4px; }
-    .logo-handle {
-      position: absolute; bottom: -6px; right: -6px;
-      width: 14px; height: 14px; background: white;
-      border: 2px solid var(--primary); border-radius: 3px;
-      cursor: se-resize;
+    :root {
+      --acc: #6366f1;
+      --acc2: #ede9fe;
+      --ink: #1e1b4b;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --surf: #ffffff;
+      --bg: #f0efff;
+      --tab-h: 58px;
+      --panel-h: 56vh;
     }
 
-    /* ── Floating picker (original style) ── */
-    #floatPicker {
-      position: fixed; inset: 0; z-index: 50;
-      display: none; align-items: flex-end;
-      background: rgba(0,0,0,0.45);
-      pointer-events: none;
-    }
-    #floatPicker.show {
-      display: flex;
-      pointer-events: all;
-    }
-    #pickerInner {
-      width: 100%; pointer-events: all;
-      padding: 0 0 88px;
-    }
-    #pickerScroll {
-      overflow-x: auto; white-space: nowrap;
-      padding: 14px 20px;
-    }
-    #pickerScroll::-webkit-scrollbar { display: none; }
-    #pickerItems { display: inline-flex; gap: 14px; align-items: center; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100dvh; overflow: hidden; background: var(--bg); font-family: 'Space Grotesk', sans-serif; }
 
-    /* Original picker circle */
-    .pcircle {
-      width: 52px; height: 52px; border-radius: 50%;
-      flex-shrink: 0; cursor: pointer; border: 4px solid transparent;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    /* ═══ PREVIEW ZONE ═══ */
+    #preview-zone {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      bottom: calc(var(--tab-h));
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px;
+      padding: 12px 16px 6px;
+      transition: bottom 0.32s cubic-bezier(.4,0,.2,1);
+    }
+    #preview-zone.panel-open {
+      bottom: calc(var(--tab-h) + var(--panel-h));
+    }
+
+    /* aspect ratios */
+    .ar-1-1  { aspect-ratio: 1/1; }
+    .ar-3-4  { aspect-ratio: 3/4; }
+    .ar-4-3  { aspect-ratio: 4/3; }
+    .ar-16-9 { aspect-ratio: 16/9; }
+    .ar-9-16 { aspect-ratio: 9/16; }
+
+    #card {
       position: relative;
+      width: 100%;
+      max-width: min(220px, 50vw);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(99,102,241,.26), 0 2px 8px rgba(0,0,0,.1);
+      border: 4px solid transparent;
+      flex-shrink: 0;
     }
-    .pcircle:hover { transform: scale(1.12); }
-    .pcircle.sel {
-      border-color: white;
-      box-shadow: 0 0 0 3px white, 0 0 0 5px rgba(255,255,255,0.5), 0 4px 16px rgba(0,0,0,0.4);
+    #bg-layer { position: absolute; inset: 0; }
+    #card-body { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; padding: 16px 14px; }
+
+    #c-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px; font-weight: 700; color: #fff;
+      line-height: 1.2; text-align: center; word-break: break-word;
     }
-    .pcircle.sel::after {
-      content: '✓'; color: white; font-size: 18px;
-      font-weight: 900; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    #c-divider {
+      width: 36px; height: 3px; border-radius: 9px;
+      background: rgba(255,255,255,.5); margin: 8px auto; display: none;
     }
-    /* text-label circles (for font/border width) */
-    .pcircle.label-style {
-      background: rgba(255,255,255,0.2) !important;
-      backdrop-filter: blur(8px);
-      border: 2px solid rgba(255,255,255,0.35) !important;
-      font-size: 11px; font-weight: 700; color: white;
-      font-family: 'Space Grotesk', sans-serif;
+    #c-content-wrap { flex: 1; display: flex; justify-content: center; }
+    #c-content {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px; color: #fff;
+      text-align: center; line-height: 1.65;
+      width: 100%; align-self: center; word-break: break-word;
+    }
+    #c-watermark {
+      position: absolute; bottom: 8px; left: 8px; z-index: 8;
+      opacity: .5; font-weight: 700; color: white; font-size: 9px;
+      pointer-events: none; display: none;
+    }
+    #logo-overlay {
+      position: absolute; z-index: 12;
+      cursor: grab; user-select: none; touch-action: none;
+    }
+    #logo-overlay:active { cursor: grabbing; }
+    #logo-overlay img { display: block; border-radius: 3px; }
+    .logo-rz {
+      position: absolute; bottom: -5px; right: -5px;
+      width: 11px; height: 11px; background: white;
+      border: 2px solid var(--acc); border-radius: 2px; cursor: se-resize;
+    }
+    #dl-btn {
+      position: absolute; bottom: 8px; right: 8px; z-index: 20;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,.18); transition: transform .14s;
+    }
+    #dl-btn:active { transform: scale(.9); }
+    #card-counter {
+      position: absolute; top: 7px; right: 7px; z-index: 20;
+      background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+      color: white; font-size: 8px; font-weight: 700;
+      padding: 2px 7px; border-radius: 20px; pointer-events: none;
+      font-family: 'Space Grotesk', sans-serif; display: none;
+    }
+    .nav-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      padding: 5px; border-radius: 50%;
+      background: rgba(0,0,0,.28); backdrop-filter: blur(4px);
+      color: white; border: none; cursor: pointer; z-index: 20;
+      opacity: 0; transition: opacity .2s; display: none;
+    }
+    .has-multi .nav-arrow { display: flex !important; opacity: .6; }
+
+    #dots {
+      display: flex; gap: 5px; align-items: center; min-height: 8px;
     }
 
-    /* ── Edit mini-sheet — peeks up, card still visible ── */
-    .mini-sheet {
-      position: fixed; left: 0; right: 0;
-      bottom: 68px; /* sits just above toolbar */
-      z-index: 48;
-      background: white;
-      border-radius: 22px 22px 0 0;
-      box-shadow: 0 -4px 32px rgba(99,102,241,0.18);
+    /* ═══ BOTTOM PANEL ═══ */
+    #panel {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: var(--tab-h);
+      height: var(--panel-h);
+      background: var(--surf);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -4px 30px rgba(99,102,241,.16);
       transform: translateY(100%);
-      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
-      /* Max height so it doesn't go all the way up */
-      max-height: 52vh;
+      transition: transform 0.32s cubic-bezier(.4,0,.2,1);
+      z-index: 40;
       display: flex; flex-direction: column;
       overflow: hidden;
     }
-    .mini-sheet.open { transform: translateY(0); }
+    #panel.open { transform: translateY(0); }
 
-    .sheet-grip {
-      flex-shrink: 0; padding: 10px 0 4px;
-      display: flex; justify-content: center; cursor: pointer;
+    #panel-grip {
+      flex-shrink: 0; height: 16px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
-    .sheet-grip::after {
-      content: ''; width: 38px; height: 4px;
+    #panel-grip::after {
+      content: ''; width: 36px; height: 4px;
       background: #d1d5db; border-radius: 9px;
     }
-    .sheet-topbar {
+
+    /* panel title row */
+    #panel-head {
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 2px 16px 8px;
-      border-bottom: 1px solid #f3f4f6;
+      padding: 0 14px 8px;
     }
-    .sheet-topbar h3 {
-      font-size: 15px; font-weight: 800;
-      color: #1e1b4b; font-family: 'Space Grotesk', sans-serif;
+    #panel-title { font-size: 13px; font-weight: 800; color: var(--ink); }
+    #panel-close {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #f3f4f6; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; color: var(--muted);
     }
-    .sheet-done {
-      padding: 6px 18px; border-radius: 20px;
-      background: var(--primary); color: white;
-      font-weight: 700; font-size: 13px; border: none; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-    }
-    .sheet-body {
-      flex: 1; overflow-y: auto; padding: 10px 16px 16px;
+
+    /* scrollable body */
+    #panel-scroll {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 0 14px 24px;
       -webkit-overflow-scrolling: touch;
     }
-    .sheet-body::-webkit-scrollbar { width: 3px; }
-    .sheet-body::-webkit-scrollbar-thumb { background: #e5e3ff; border-radius: 3px; }
+    #panel-scroll::-webkit-scrollbar { width: 3px; }
+    #panel-scroll::-webkit-scrollbar-thumb { background: #e5e3ff; border-radius: 3px; }
 
-    /* ── Sheet internals ── */
-    .s-label {
-      font-size: 10px; font-weight: 700; color: #6b7280;
-      text-transform: uppercase; letter-spacing: .07em;
+    /* ── section dividers ── */
+    .sec {
+      font-size: 9px; font-weight: 800; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .08em;
       display: flex; align-items: center; gap: 8px;
-      margin: 10px 0 6px;
+      margin: 12px 0 7px;
     }
-    .s-label::after { content: ''; flex: 1; height: 1px; background: #e5e3ff; }
-    .s-label:first-child { margin-top: 0; }
+    .sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .sec:first-child { margin-top: 4px; }
 
-    .s-input {
+    /* ── text toggle (Header / Content) ── */
+    #text-toggle {
+      display: flex; background: #f3f4f6;
+      border-radius: 12px; padding: 3px; gap: 3px; margin-bottom: 10px;
+    }
+    .tt-btn {
+      flex: 1; padding: 7px 0; border-radius: 9px; border: none;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      background: transparent; color: var(--muted);
+      font-family: 'Space Grotesk', sans-serif; transition: all .16s;
+    }
+    .tt-btn.on {
+      background: var(--surf); color: var(--acc);
+      box-shadow: 0 1px 6px rgba(99,102,241,.18);
+    }
+
+    /* ── text input ── */
+    .t-in {
       width: 100%; padding: 9px 12px; border-radius: 12px;
       background: #f8f7ff; border: 1.5px solid #e5e3ff;
-      font-size: 14px; color: #1e1b4b; outline: none;
+      font-size: 13px; color: var(--ink); outline: none;
       font-family: 'Space Grotesk', sans-serif;
-      transition: border-color .18s;
+      transition: border-color .16s;
     }
-    .s-input:focus { border-color: var(--primary); }
-    textarea.s-input { resize: none; min-height: 68px; line-height: 1.55; }
+    .t-in:focus { border-color: var(--acc); }
+    textarea.t-in { resize: none; line-height: 1.55; min-height: 60px; }
 
-    .font-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .fpill {
-      padding: 6px 13px; border-radius: 20px;
-      border: 1.5px solid #e5e3ff; font-size: 12px; font-weight: 600;
-      cursor: pointer; background: #f8f7ff; color: #1e1b4b;
-      transition: all .14s; white-space: nowrap;
+    /* ── font pills ── */
+    .font-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+    .fp {
+      padding: 5px 12px; border-radius: 20px;
+      border: 1.5px solid var(--border); font-size: 11px; font-weight: 600;
+      cursor: pointer; background: #f8f7ff; color: var(--ink);
+      transition: all .13s; white-space: nowrap;
     }
-    .fpill.on { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+    .fp.on { border-color: var(--acc); background: var(--acc2); color: var(--acc); }
 
-    .sl-row { display: flex; align-items: center; gap: 8px; }
-    .sl-ico { font-size: 15px; color: #6b7280; flex-shrink: 0; }
+    /* ── slider ── */
+    .sl { display: flex; align-items: center; gap: 8px; }
+    .sl-i { font-size: 14px; color: var(--muted); flex-shrink: 0; }
     input[type=range] {
       -webkit-appearance: none; flex: 1; height: 5px;
       border-radius: 3px; background: #e5e3ff; outline: none;
     }
     input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
-      background: var(--primary); cursor: pointer;
-      box-shadow: 0 1px 6px rgba(99,102,241,.38);
+      -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%;
+      background: var(--acc); cursor: pointer;
+      box-shadow: 0 1px 6px rgba(99,102,241,.4);
     }
 
-    .btn-row { display: flex; gap: 5px; }
-    .s-btn {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 7px 4px; border-radius: 10px; gap: 2px;
-      background: #f8f7ff; border: 1.5px solid #e5e3ff;
-      cursor: pointer; font-size: 9.5px; font-weight: 600;
-      color: #6b7280; transition: all .13s;
+    /* ── icon button row ── */
+    .i-row { display: flex; gap: 5px; }
+    .ib {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 7px 4px; border-radius: 10px; gap: 2px;
+      background: #f8f7ff; border: 1.5px solid var(--border);
+      cursor: pointer; font-size: 9px; font-weight: 700;
+      color: var(--muted); transition: all .13s;
       font-family: 'Space Grotesk', sans-serif;
     }
-    .s-btn .material-symbols-outlined { font-size: 17px; }
-    .s-btn.on { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+    .ib .material-symbols-outlined { font-size: 16px; }
+    .ib.on { border-color: var(--acc); background: var(--acc2); color: var(--acc); }
+    .ib:active { transform: scale(.94); }
 
-    /* color swatches inside sheet */
-    .swatch-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    /* ── color swatches ── */
+    .sw-row { display: flex; flex-wrap: wrap; gap: 7px; }
     .sw {
-      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
-      border: 2.5px solid transparent; transition: transform .13s;
+      width: 27px; height: 27px; border-radius: 50%; cursor: pointer;
+      border: 2.5px solid transparent; transition: transform .12s;
       position: relative; flex-shrink: 0;
     }
-    .sw:active { transform: scale(1.2); }
+    .sw:active { transform: scale(1.18); }
     .sw.on {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+      border-color: var(--acc);
+      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--acc);
     }
     .sw.on::after {
       content: '✓'; position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; color: white; font-weight: 800;
+      font-size: 10px; color: white; font-weight: 800;
       text-shadow: 0 1px 3px rgba(0,0,0,.5);
     }
 
-    .tog-row {
-      display: flex; align-items: center; gap: 9px; cursor: pointer; padding: 5px 0;
+    /* ── gradient swatches ── */
+    .bg-wrap { display: flex; flex-wrap: wrap; gap: 7px; }
+    .bg-sw {
+      width: 42px; height: 27px; border-radius: 8px;
+      flex-shrink: 0; cursor: pointer; border: 2.5px solid transparent;
+      transition: transform .12s;
     }
-    .tog-row input { width: 15px; height: 15px; accent-color: var(--primary); }
-    .tog-row span { font-size: 13px; color: #1e1b4b; }
+    .bg-sw:active { transform: scale(1.1); }
+    .bg-sw.on {
+      border-color: var(--acc);
+      box-shadow: 0 0 0 2px white, 0 0 0 3.5px var(--acc);
+    }
 
-    /* Logo sheet extras */
-    .upload-area {
-      border: 2px dashed #e5e3ff; border-radius: 14px;
-      padding: 20px; text-align: center; cursor: pointer;
-      background: #f8f7ff; transition: border-color .18s;
+    /* ── toggle checkbox ── */
+    .tog {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; padding: 4px 0;
     }
-    .upload-area:active { border-color: var(--primary); }
+    .tog input { width: 14px; height: 14px; accent-color: var(--acc); }
+    .tog span { font-size: 12px; color: var(--ink); }
+
+    /* ── upload ── */
+    .up-box {
+      border: 2px dashed #e5e3ff; border-radius: 12px;
+      padding: 16px; text-align: center; cursor: pointer;
+      background: #f8f7ff; transition: border-color .16s;
+    }
+    .up-box:active { border-color: var(--acc); }
+
     .pos-grid {
-      display: grid; grid-template-columns: repeat(3,1fr); gap: 5px;
-      background: #f8f7ff; border-radius: 12px;
-      padding: 8px; border: 1.5px solid #e5e3ff;
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 4px;
+      background: #f8f7ff; border-radius: 10px; padding: 6px;
+      border: 1.5px solid var(--border);
     }
-    .pos-btn {
-      height: 32px; border-radius: 7px;
-      border: 1.5px solid #e5e3ff; background: white;
+    .pos-b {
+      height: 28px; border-radius: 6px;
+      border: 1.5px solid var(--border); background: white;
       cursor: pointer; position: relative; transition: all .12s;
     }
-    .pos-btn:active { border-color: var(--primary); background: #ede9fe; }
-    .pdot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); position: absolute; }
-    .rmv-btn {
-      width: 100%; padding: 10px; border-radius: 12px;
+    .pos-b:active { border-color: var(--acc); background: var(--acc2); }
+    .pdot { width: 5px; height: 5px; border-radius: 50%; background: var(--acc); position: absolute; }
+
+    .rmv {
+      width: 100%; padding: 9px; border-radius: 10px;
       border: 1.5px solid #fecaca; background: #fff5f5;
-      color: #ef4444; font-weight: 700; font-size: 13px;
-      cursor: pointer; font-family: 'Space Grotesk', sans-serif;
-      margin-top: 8px;
+      color: #ef4444; font-weight: 700; font-size: 12px;
+      cursor: pointer; font-family: 'Space Grotesk', sans-serif; margin-top: 8px;
     }
 
-    /* ── Toolbar (original style) ── */
-    #toolbar {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 49;
-      background: rgba(255,255,255,0.88);
+    /* ═══ TAB BAR ═══ */
+    #tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: var(--tab-h); z-index: 50;
+      background: rgba(255,255,255,.95);
       backdrop-filter: blur(20px) saturate(180%);
-      border-top: 1px solid rgba(99,102,241,0.12);
-      box-shadow: 0 -4px 24px rgba(99,102,241,0.1);
+      border-top: 1px solid rgba(99,102,241,.12);
+      box-shadow: 0 -3px 20px rgba(99,102,241,.1);
+      display: flex; align-items: center;
     }
-    .tb-inner {
-      max-width: 520px; margin: 0 auto;
-      padding: 6px 8px 8px;
-      display: flex; justify-content: space-around; align-items: center;
+    #tab-inner {
+      width: 100%; max-width: 520px; margin: 0 auto;
+      display: flex; justify-content: space-around;
+      padding: 0 4px;
     }
-    .tb-btn {
+    .tab {
       display: flex; flex-direction: column; align-items: center; gap: 2px;
-      color: #64748b; background: none; border: none; cursor: pointer;
-      padding: 4px 6px; border-radius: 9px;
-      transition: color .15s, background .15s;
-      font-family: 'Space Grotesk', sans-serif; flex: 1;
+      background: none; border: none; cursor: pointer;
+      padding: 6px 8px; border-radius: 10px;
+      color: #64748b; transition: color .15s; flex: 1;
+      font-family: 'Space Grotesk', sans-serif;
     }
-    .tb-btn:hover { color: var(--primary); }
-    .tb-btn.active { color: var(--primary); }
-    .tb-btn .material-symbols-outlined { font-size: 22px; }
-    .tb-btn .tbl { font-size: 9px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+    .tab .material-symbols-outlined { font-size: 21px; }
+    .tab .tl { font-size: 8.5px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+    .tab:hover, .tab.on { color: var(--acc); }
+    .tab.new-btn { color: var(--acc) !important; }
   </style>
 </head>
-<body class="bg-gray-100 flex flex-col">
+<body>
 
-<!-- ══════════ PREVIEW ══════════ -->
-<main class="flex-1 flex flex-col items-center justify-center p-6 pb-24 pt-8">
-  <div id="cardPreview"
-       class="relative w-full rounded-3xl shadow-2xl overflow-hidden aspect-3-4"
-       style="max-width:340px; border:4px solid transparent;">
+<!-- ═══ PREVIEW ═══ -->
+<div id="preview-zone">
+  <div id="card" class="ar-3-4" style="border:4px solid transparent;">
+    <div id="bg-layer" style="background:linear-gradient(135deg,#7c3aed,#c026d3);"></div>
+    <div style="position:absolute;inset:0;background:rgba(255,255,255,.07);z-index:3;pointer-events:none;"></div>
 
-    <div id="bgLayer" style="position:absolute;inset:0;background:linear-gradient(135deg,#7c3aed,#c026d3);"></div>
-    <div style="position:absolute;inset:0;background:rgba(255,255,255,0.08);pointer-events:none;z-index:2;"></div>
-
-    <!-- Card text content -->
-    <div id="cardContent" style="position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;padding:32px 28px;">
-      <div id="headerBlock">
-        <div id="previewTitle"
-             style="font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#fff;line-height:1.2;text-align:center;word-break:break-word;">
-          FlashCard Maker
-        </div>
-      </div>
-      <div id="previewDivider"
-           style="width:40px;height:3px;border-radius:9px;background:rgba(255,255,255,.5);margin:10px auto;display:none;"></div>
-      <div id="contentBlock" style="flex:1;display:flex;justify-content:center;">
-        <div id="previewContent"
-             style="font-family:'Inter',sans-serif;font-size:15px;color:#fff;text-align:center;line-height:1.65;width:100%;align-self:center;word-break:break-word;">
-          Tap Header or Content below to edit. Your changes appear here instantly!
-        </div>
+    <div id="card-body">
+      <div id="c-title">FlashCard Maker</div>
+      <div id="c-divider"></div>
+      <div id="c-content-wrap">
+        <div id="c-content">Tap Text below to start editing — changes appear here instantly!</div>
       </div>
     </div>
 
-    <!-- Watermark -->
-    <div id="watermarkEl"
-         style="position:absolute;bottom:14px;left:14px;z-index:12;opacity:.5;font-weight:700;color:white;font-size:13px;pointer-events:none;display:none;"></div>
-
-    <!-- Logo -->
-    <div id="logoOverlay" style="display:none;position:absolute;z-index:15;cursor:grab;user-select:none;touch-action:none;">
-      <img id="logoImg" src="" alt="" style="width:70px;display:block;border-radius:4px;"/>
-      <div class="logo-handle" id="logoResizeHandle"></div>
+    <div id="c-watermark"></div>
+    <div id="logo-overlay" style="display:none;position:absolute;">
+      <img id="logo-img" src="" alt="" style="width:55px;display:block;border-radius:3px;"/>
+      <div class="logo-rz" id="logo-rz"></div>
     </div>
-
-    <!-- Card counter -->
-    <div id="cardCounter"
-         style="display:none;position:absolute;top:12px;right:12px;z-index:20;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);color:white;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;pointer-events:none;font-family:'Space Grotesk',sans-serif;"></div>
-
-    <!-- Nav arrows -->
-    <button id="prevBtn" class="nav-overlay" style="left:8px;">
-      <span class="material-symbols-outlined" style="font-size:28px;">chevron_left</span>
+    <div id="card-counter"></div>
+    <button class="nav-arrow" id="prev-btn" style="left:6px;">
+      <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
     </button>
-    <button id="nextBtn" class="nav-overlay" style="right:8px;">
-      <span class="material-symbols-outlined" style="font-size:28px;">chevron_right</span>
+    <button class="nav-arrow" id="next-btn" style="right:6px;">
+      <span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span>
     </button>
-
-    <!-- Download -->
-    <button id="downloadBtn"
-            style="position:absolute;bottom:14px;right:14px;z-index:20;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);box-shadow:0 4px 18px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform .15s;">
-      <span class="material-symbols-outlined" style="font-size:24px;color:var(--primary);">download</span>
+    <button id="dl-btn">
+      <span class="material-symbols-outlined" style="font-size:18px;color:var(--acc);">download</span>
     </button>
   </div>
+  <div id="dots"></div>
+</div>
 
-  <!-- Dot indicators -->
-  <div id="dotRow" style="display:flex;gap:6px;margin-top:10px;min-height:10px;"></div>
-</main>
+<!-- ═══ BOTTOM PANEL ═══ -->
+<div id="panel">
+  <div id="panel-grip"></div>
+  <div id="panel-head">
+    <span id="panel-title">Text</span>
+    <button id="panel-close">
+      <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+    </button>
+  </div>
+  <div id="panel-scroll">
+    <!-- dynamic content injected by JS -->
+  </div>
+</div>
 
-<!-- ══════════ TOOLBAR ══════════ -->
-<div id="toolbar">
-  <div class="tb-inner">
-    <button class="tb-btn" data-action="aspect">
-      <span class="material-symbols-outlined">aspect_ratio</span>
-      <span class="tbl">Ratio</span>
+<!-- ═══ TAB BAR ═══ -->
+<div id="tab-bar">
+  <div id="tab-inner">
+    <button class="tab" data-tab="text">
+      <span class="material-symbols-outlined">text_fields</span>
+      <span class="tl">Text</span>
     </button>
-    <button class="tb-btn" data-action="header">
-      <span class="material-symbols-outlined">title</span>
-      <span class="tbl">Header</span>
-    </button>
-    <button class="tb-btn" data-action="content">
-      <span class="material-symbols-outlined">notes</span>
-      <span class="tbl">Content</span>
-    </button>
-    <button class="tb-btn" data-action="bg">
+    <button class="tab" data-tab="bg">
       <span class="material-symbols-outlined">gradient</span>
-      <span class="tbl">BG</span>
+      <span class="tl">BG</span>
     </button>
-    <button class="tb-btn" data-action="border">
+    <button class="tab" data-tab="border">
       <span class="material-symbols-outlined">border_outer</span>
-      <span class="tbl">Border</span>
+      <span class="tl">Border</span>
     </button>
-    <button class="tb-btn" data-action="logo">
+    <button class="tab" data-tab="ratio">
+      <span class="material-symbols-outlined">aspect_ratio</span>
+      <span class="tl">Ratio</span>
+    </button>
+    <button class="tab" data-tab="logo">
       <span class="material-symbols-outlined">add_photo_alternate</span>
-      <span class="tbl">Logo</span>
+      <span class="tl">Logo</span>
     </button>
-    <button class="tb-btn" data-action="addCard" style="color:var(--primary);">
+    <button class="tab new-btn" data-tab="new">
       <span class="material-symbols-outlined">add_card</span>
-      <span class="tbl">New</span>
+      <span class="tl">New</span>
     </button>
   </div>
 </div>
-
-<!-- ══════════ FLOATING PICKER (original style) ══════════ -->
-<!-- used for: BG, aspect ratio, border width -->
-<div id="floatPicker">
-  <div id="pickerInner">
-    <div id="pickerScroll" class="scrollbar-hide">
-      <div id="pickerItems"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ HEADER MINI-SHEET ══════════ -->
-<div id="headerSheet" class="mini-sheet">
-  <div class="sheet-grip"></div>
-  <div class="sheet-topbar">
-    <h3>✏️ Header</h3>
-    <button class="sheet-done" id="closeHeader">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div class="s-label">Text</div>
-    <input id="titleInput" type="text" class="s-input" placeholder="Header text…"/>
-
-    <div class="s-label">Font</div>
-    <div class="font-row" id="hFontRow"></div>
-
-    <div class="s-label">Size</div>
-    <div class="sl-row">
-      <span class="material-symbols-outlined sl-ico">text_decrease</span>
-      <input type="range" id="hSize" min="14" max="72" value="36"/>
-      <span class="material-symbols-outlined sl-ico">text_increase</span>
-    </div>
-
-    <div class="s-label">Style</div>
-    <div class="btn-row">
-      <button class="s-btn on" id="hBold"><span class="material-symbols-outlined">format_bold</span><span>Bold</span></button>
-      <button class="s-btn" id="hItalic"><span class="material-symbols-outlined">format_italic</span><span>Italic</span></button>
-    </div>
-
-    <div class="s-label">Alignment</div>
-    <div class="btn-row">
-      <button class="s-btn" data-ah="left"><span class="material-symbols-outlined">format_align_left</span></button>
-      <button class="s-btn on" data-ah="center"><span class="material-symbols-outlined">format_align_center</span></button>
-      <button class="s-btn" data-ah="right"><span class="material-symbols-outlined">format_align_right</span></button>
-    </div>
-
-    <div class="s-label">Color</div>
-    <div class="swatch-row" id="hColorRow"></div>
-
-    <div class="s-label">Divider</div>
-    <label class="tog-row">
-      <input type="checkbox" id="divToggle"/>
-      <span>Show separator line below header</span>
-    </label>
-  </div>
-</div>
-
-<!-- ══════════ CONTENT MINI-SHEET ══════════ -->
-<div id="contentSheet" class="mini-sheet">
-  <div class="sheet-grip"></div>
-  <div class="sheet-topbar">
-    <h3>📝 Content</h3>
-    <button class="sheet-done" id="closeContent">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div class="s-label">Text</div>
-    <textarea id="contentInput" class="s-input" rows="3" placeholder="Content text…"></textarea>
-
-    <div class="s-label">Font</div>
-    <div class="font-row" id="cFontRow"></div>
-
-    <div class="s-label">Size</div>
-    <div class="sl-row">
-      <span class="material-symbols-outlined sl-ico">text_decrease</span>
-      <input type="range" id="cSize" min="9" max="38" value="15"/>
-      <span class="material-symbols-outlined sl-ico">text_increase</span>
-    </div>
-
-    <div class="s-label">Style</div>
-    <div class="btn-row">
-      <button class="s-btn" id="cBold"><span class="material-symbols-outlined">format_bold</span><span>Bold</span></button>
-      <button class="s-btn" id="cItalic"><span class="material-symbols-outlined">format_italic</span><span>Italic</span></button>
-    </div>
-
-    <div class="s-label">Alignment</div>
-    <div class="btn-row">
-      <button class="s-btn" data-ac="left"><span class="material-symbols-outlined">format_align_left</span></button>
-      <button class="s-btn on" data-ac="center"><span class="material-symbols-outlined">format_align_center</span></button>
-      <button class="s-btn" data-ac="right"><span class="material-symbols-outlined">format_align_right</span></button>
-    </div>
-
-    <div class="s-label">Vertical</div>
-    <div class="btn-row">
-      <button class="s-btn" data-va="top"><span class="material-symbols-outlined">vertical_align_top</span><span>Top</span></button>
-      <button class="s-btn on" data-va="center"><span class="material-symbols-outlined">vertical_align_center</span><span>Mid</span></button>
-      <button class="s-btn" data-va="bottom"><span class="material-symbols-outlined">vertical_align_bottom</span><span>Bot</span></button>
-    </div>
-
-    <div class="s-label">Color</div>
-    <div class="swatch-row" id="cColorRow"></div>
-
-    <div class="s-label">Watermark</div>
-    <input id="wmInput" type="text" class="s-input" placeholder="@yourbrand (optional)"/>
-  </div>
-</div>
-
-<!-- ══════════ LOGO MINI-SHEET ══════════ -->
-<div id="logoSheet" class="mini-sheet">
-  <div class="sheet-grip"></div>
-  <div class="sheet-topbar">
-    <h3>🖼 Logo</h3>
-    <button class="sheet-done" id="closeLogo">Done</button>
-  </div>
-  <div class="sheet-body">
-    <div class="upload-area" id="uploadBox">
-      <span class="material-symbols-outlined" style="font-size:30px;color:#6b7280;display:block;margin-bottom:5px;">upload_file</span>
-      <p style="font-size:13px;font-weight:600;color:#6b7280;">Tap to upload logo</p>
-      <p style="font-size:11px;color:#9ca3af;margin-top:2px;">PNG · JPG · SVG · WebP</p>
-      <input type="file" id="logoFile" accept="image/*" style="display:none;"/>
-    </div>
-
-    <div class="s-label">Size</div>
-    <div class="sl-row">
-      <span class="material-symbols-outlined sl-ico">photo_size_select_small</span>
-      <input type="range" id="logoSize" min="20" max="200" value="70"/>
-      <span class="material-symbols-outlined sl-ico">photo_size_select_large</span>
-    </div>
-
-    <div class="s-label">Quick Position</div>
-    <div class="pos-grid">
-      <button class="pos-btn" data-p="tl"><span class="pdot" style="top:3px;left:3px;"></span></button>
-      <button class="pos-btn" data-p="tc"><span class="pdot" style="top:3px;left:50%;transform:translateX(-50%);"></span></button>
-      <button class="pos-btn" data-p="tr"><span class="pdot" style="top:3px;right:3px;"></span></button>
-      <button class="pos-btn" data-p="ml"><span class="pdot" style="top:50%;transform:translateY(-50%);left:3px;"></span></button>
-      <button class="pos-btn" data-p="mc"><span class="pdot" style="top:50%;left:50%;transform:translate(-50%,-50%);"></span></button>
-      <button class="pos-btn" data-p="mr"><span class="pdot" style="top:50%;transform:translateY(-50%);right:3px;"></span></button>
-      <button class="pos-btn" data-p="bl"><span class="pdot" style="bottom:3px;left:3px;"></span></button>
-      <button class="pos-btn" data-p="bc"><span class="pdot" style="bottom:3px;left:50%;transform:translateX(-50%);"></span></button>
-      <button class="pos-btn" data-p="br"><span class="pdot" style="bottom:3px;right:3px;"></span></button>
-    </div>
-    <p style="font-size:11px;color:#6b7280;text-align:center;margin-top:6px;">Or drag the logo anywhere on the card ↑</p>
-    <button class="rmv-btn" id="rmvLogo" style="display:none;">🗑 Remove Logo</button>
-  </div>
-</div>
-
 
 <script>
-// ─── STATE ───────────────────────────────────────────────────────────────────
-
+// ─── STATE ────────────────────────────────────────────────────────────────────
 const mk = () => ({
-  title: "FlashCard Maker",
-  content: "Tap Header or Content to edit. Watch your changes live!",
-  watermark: "",
-  hFont:"elegant", hSize:36, hColor:"#ffffff",
-  hAlign:"center",  hBold:true, hItalic:false,
-  cFont:"display",  cSize:15,  cColor:"#ffffff",
-  cAlign:"center",  cBold:false, cItalic:false, cVA:"center",
-  bg:"vf", aspect:"aspect-3-4",
-  bw:"4", bc:"transparent",
-  div:false,
-  logo:null, lsz:70, lx:14, ly:14,
+  title:"FlashCard Maker", content:"Tap Text below to edit. See changes live!",
+  watermark:"",
+  hFont:"elegant", hSize:22, hColor:"#ffffff", hAlign:"center", hBold:true,  hItalic:false,
+  cFont:"display",  cSize:11, cColor:"#ffffff", cAlign:"center", cBold:false, cItalic:false, cVA:"center",
+  bg:"vf", aspect:"ar-3-4", bw:"4", bc:"transparent", div:false,
+  logo:null, lsz:55, lx:10, ly:10,
 });
+let cards=[mk()], idx=0, activeSeg='header'; // activeSeg: 'header'|'content'
 
-let cards = [mk()], idx = 0;
-
-// ─── DATA ────────────────────────────────────────────────────────────────────
-
-const BG = {
+// ─── GRADIENTS ────────────────────────────────────────────────────────────────
+const GR={
   vf:"linear-gradient(135deg,#7c3aed,#c026d3)",
   bc:"linear-gradient(135deg,#2563eb,#06b6d4)",
   ro:"linear-gradient(135deg,#f43f5e,#f97316)",
@@ -573,453 +451,420 @@ const BG = {
   yo:"linear-gradient(135deg,#facc15,#ea580c)",
   bv:"linear-gradient(135deg,#3b82f6,#7c3aed)",
   gl:"linear-gradient(135deg,#22c55e,#a3e635)",
-};
-// mid-colour for circle swatch
-const BG_MID = {
-  vf:"#9333ea", bc:"#3b82f6", ro:"#fb7185", et:"#10b981", ar:"#f59e0b",
-  ip:"#6366f1",  si:"#0ea5e9", pr:"#ec4899", le:"#84cc16", fp:"#c026d3",
-  oa:"#f97316",  sd:"#475569", gb:"#374151", tc:"#2dd4bf", rr:"#dc2626",
-  yo:"#facc15",  bv:"#3b82f6", gl:"#22c55e",
+  wh:"linear-gradient(135deg,#ffffff,#f3f4f6)",
+  cr:"linear-gradient(135deg,#fdf4ff,#fce7f3)",
 };
 
-const FONTS = [
-  {k:"elegant", l:"Playfair", c:"'Playfair Display',serif"},
-  {k:"lora",    l:"Lora",     c:"'Lora',serif"},
-  {k:"dm",      l:"DM Serif", c:"'DM Serif Display',serif"},
-  {k:"display", l:"Inter",    c:"'Inter',sans-serif"},
-  {k:"grotesk", l:"Grotesk",  c:"'Space Grotesk',sans-serif"},
-  {k:"mono",    l:"Mono",     c:"'Roboto Mono',monospace"},
-  {k:"syne",    l:"Syne",     c:"'Syne',sans-serif"},
+// ─── FONTS ────────────────────────────────────────────────────────────────────
+const FONTS=[
+  {k:"elegant",l:"Playfair",  c:"'Playfair Display',serif"},
+  {k:"lora",   l:"Lora",      c:"'Lora',serif"},
+  {k:"dm",     l:"DM Serif",  c:"'DM Serif Display',serif"},
+  {k:"display",l:"Inter",     c:"'Inter',sans-serif"},
+  {k:"grotesk",l:"Grotesk",   c:"'Space Grotesk',sans-serif"},
+  {k:"mono",   l:"Mono",      c:"'Roboto Mono',monospace"},
+  {k:"syne",   l:"Syne",      c:"'Syne',sans-serif"},
 ];
-const gfc = k => (FONTS.find(f => f.k===k)||FONTS[0]).c;
+const gfc=k=>(FONTS.find(f=>f.k===k)||FONTS[0]).c;
 
-const TXT_C = ["#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd",
-               "#fbcfe8","#374151","#1f2937","#000000","#dc2626","#ea580c","#ca8a04",
-               "#16a34a","#2563eb","#7c3aed","#db2777","#0891b2","#0d9488"];
-const BDR_C = ["#ffffff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd","#000000",
-               "#1f2937","#dc2626","#ea580c","#ca8a04","#16a34a","#2563eb","#7c3aed",
-               "#db2777","#f97316","#10b981","#06b6d4","#8b5cf6","#374151"];
+// ─── COLORS ───────────────────────────────────────────────────────────────────
+const TC=["#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd",
+          "#fbcfe8","#374151","#1f2937","#000000","#dc2626","#ea580c","#ca8a04",
+          "#16a34a","#2563eb","#7c3aed","#db2777","#0891b2","#0d9488"];
+const BC=["#ffffff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd","#000000",
+          "#1f2937","#dc2626","#ea580c","#ca8a04","#16a34a","#2563eb","#7c3aed",
+          "#db2777","#f97316","#10b981","#06b6d4","#8b5cf6","#374151"];
 
 // ─── ELEMENTS ────────────────────────────────────────────────────────────────
-
-const $ = id => document.getElementById(id);
-const CP = $('cardPreview'), BGL = $('bgLayer'),
-      PT = $('previewTitle'), PC = $('previewContent'),
-      PD = $('previewDivider'), CB = $('contentBlock'),
-      WM = $('watermarkEl'), LO = $('logoOverlay'), LI = $('logoImg'),
-      CC = $('cardCounter');
+const $=id=>document.getElementById(id);
+const CARD=$('card'), BGL=$('bg-layer'), CT=$('c-title'), CC2=$('c-content'),
+      CD=$('c-divider'), CW=$('c-content-wrap'), WM=$('c-watermark'),
+      LO=$('logo-overlay'), LI=$('logo-img'), COUNTER=$('card-counter');
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(){
+  const c=cards[idx];
+  BGL.style.background=GR[c.bg]||GR.vf;
+  CARD.classList.remove('ar-1-1','ar-3-4','ar-4-3','ar-16-9','ar-9-16');
+  CARD.classList.add(c.aspect);
+  CARD.style.borderWidth=c.bw==='0'?'0':c.bw+'px';
+  CARD.style.borderStyle='solid'; CARD.style.borderColor=c.bc;
 
-function render() {
-  const c = cards[idx];
-  BGL.style.background = BG[c.bg] || BG.vf;
+  CT.textContent=c.title||'';
+  CT.style.cssText=`font-family:${gfc(c.hFont)};font-size:${c.hSize}px;font-weight:${c.hBold?'700':'400'};font-style:${c.hItalic?'italic':'normal'};color:${c.hColor};text-align:${c.hAlign};line-height:1.2;word-break:break-word;`;
 
-  CP.classList.remove('aspect-1-1','aspect-3-4','aspect-4-3','aspect-16-9','aspect-9-16');
-  CP.classList.add(c.aspect);
-  CP.style.borderWidth = c.bw === '0' ? '0' : c.bw + 'px';
-  CP.style.borderStyle = 'solid';
-  CP.style.borderColor = c.bc;
+  CD.style.display=c.div?'block':'none';
 
-  PT.textContent        = c.title || '';
-  PT.style.fontFamily   = gfc(c.hFont);
-  PT.style.fontSize     = c.hSize + 'px';
-  PT.style.color        = c.hColor;
-  PT.style.textAlign    = c.hAlign;
-  PT.style.fontWeight   = c.hBold   ? '700' : '400';
-  PT.style.fontStyle    = c.hItalic ? 'italic' : 'normal';
+  CC2.textContent=c.content||'';
+  CC2.style.cssText=`font-family:${gfc(c.cFont)};font-size:${c.cSize}px;font-weight:${c.cBold?'700':'400'};font-style:${c.cItalic?'italic':'normal'};color:${c.cColor};text-align:${c.cAlign};line-height:1.65;width:100%;align-self:center;word-break:break-word;`;
+  CW.style.justifyContent=c.cVA==='top'?'flex-start':c.cVA==='bottom'?'flex-end':'center';
 
-  PD.style.display = c.div ? 'block' : 'none';
+  WM.textContent=c.watermark||''; WM.style.display=c.watermark?'block':'none';
 
-  PC.textContent        = c.content || '';
-  PC.style.fontFamily   = gfc(c.cFont);
-  PC.style.fontSize     = c.cSize + 'px';
-  PC.style.color        = c.cColor;
-  PC.style.textAlign    = c.cAlign;
-  PC.style.fontWeight   = c.cBold   ? '700' : '400';
-  PC.style.fontStyle    = c.cItalic ? 'italic' : 'normal';
-  CB.style.justifyContent = c.cVA === 'top' ? 'flex-start' : c.cVA === 'bottom' ? 'flex-end' : 'center';
+  if(c.logo){
+    LI.src=c.logo; LI.style.width=c.lsz+'px';
+    LO.style.left=c.lx+'px'; LO.style.top=c.ly+'px';
+    LO.style.display='block';
+  } else { LO.style.display='none'; }
 
-  WM.textContent   = c.watermark || '';
-  WM.style.display = c.watermark ? 'block' : 'none';
-
-  if (c.logo) {
-    LI.src = c.logo; LI.style.width = c.lsz + 'px';
-    LO.style.left = c.lx + 'px'; LO.style.top = c.ly + 'px';
-    LO.style.display = 'block';
-    $('rmvLogo').style.display = 'block';
-  } else {
-    LO.style.display = 'none';
-    $('rmvLogo').style.display = 'none';
-  }
-
-  const multi = cards.length > 1;
-  CP.classList.toggle('has-multiple', multi);
-  CC.style.display = multi ? 'block' : 'none';
-  if (multi) CC.textContent = `${idx+1} / ${cards.length}`;
-  $('prevBtn').disabled = idx === 0;
-  $('nextBtn').disabled = idx === cards.length - 1;
+  const multi=cards.length>1;
+  CARD.classList.toggle('has-multi',multi);
+  COUNTER.style.display=multi?'block':'none';
+  if(multi) COUNTER.textContent=`${idx+1}/${cards.length}`;
+  $('prev-btn').disabled=idx===0; $('next-btn').disabled=idx===cards.length-1;
   renderDots();
 }
-
-function renderDots() {
-  const d = $('dotRow'); d.innerHTML = '';
-  cards.forEach((_, i) => {
-    const el = document.createElement('div');
-    const a = i === idx;
-    el.style.cssText = `width:${a?'18px':'7px'};height:7px;border-radius:4px;background:${a?'var(--primary)':'#c7d2fe'};transition:all .22s;cursor:pointer;`;
-    el.onclick = () => { idx = i; render(); };
+function renderDots(){
+  const d=$('dots'); d.innerHTML='';
+  cards.forEach((_,i)=>{
+    const el=document.createElement('div');
+    el.style.cssText=`width:${i===idx?'16px':'6px'};height:6px;border-radius:3px;background:${i===idx?'var(--acc)':'#c7d2fe'};transition:all .2s;cursor:pointer;`;
+    el.onclick=()=>{idx=i;render();};
     d.appendChild(el);
   });
 }
 
-// ─── FLOATING PICKER — original bubble style ─────────────────────────────────
+// ─── PANEL ───────────────────────────────────────────────────────────────────
+let curTab=null;
+const pz=$('preview-zone'), panel=$('panel'), ps=$('panel-scroll'), pt=$('panel-title');
 
-let pickerClose = null;
-
-function showPicker(items, onClose) {
-  const fp = $('floatPicker'), pi = $('pickerItems');
-  pi.innerHTML = '';
-  items.forEach(item => {
-    const btn = document.createElement('button');
-    btn.className = 'pcircle' + (item.selected ? ' sel' : '');
-    if (item.isLabel) {
-      btn.classList.add('label-style');
-      btn.textContent = item.label;
-      btn.style.fontFamily = item.fontFamily || 'inherit';
-    } else {
-      btn.style.background = item.color;
-      // ring for dark colours
-      btn.style.boxShadow = '0 2px 12px rgba(0,0,0,0.35)';
-    }
-    btn.onclick = () => {
-      item.action();
-      hidePicker();
-      render();
-    };
-    pi.appendChild(btn);
-  });
-  fp.classList.add('show');
-  pickerClose = onClose || null;
+function openPanel(tab){
+  curTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===tab));
+  buildPanel(tab);
+  panel.classList.add('open');
+  pz.classList.add('panel-open');
+}
+function closePanel(){
+  panel.classList.remove('open');
+  pz.classList.remove('panel-open');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  curTab=null;
 }
 
-function hidePicker() {
-  $('floatPicker').classList.remove('show');
-  if (pickerClose) { pickerClose(); pickerClose = null; }
+$('panel-grip').onclick=()=>closePanel();
+$('panel-close').onclick=()=>closePanel();
+
+// ─── BUILD PANEL CONTENT ──────────────────────────────────────────────────────
+function buildPanel(tab){
+  ps.innerHTML='';
+  pt.textContent={text:'Text',bg:'Background',border:'Border',ratio:'Aspect Ratio',logo:'Logo'}[tab]||tab;
+
+  if(tab==='text') buildTextPanel();
+  else if(tab==='bg') buildBgPanel();
+  else if(tab==='border') buildBorderPanel();
+  else if(tab==='ratio') buildRatioPanel();
+  else if(tab==='logo') buildLogoPanel();
 }
 
-$('floatPicker').addEventListener('click', e => {
-  if (e.target === $('floatPicker') || e.target === $('pickerInner')) hidePicker();
-});
+// ── TEXT PANEL (InShot style — Header/Content toggle at top) ──────────────────
+function buildTextPanel(){
+  const c=cards[idx];
+  const isH=activeSeg==='header';
 
-// ─── MINI-SHEETS ─────────────────────────────────────────────────────────────
+  // ── Segment toggle ──
+  const toggleWrap=el('div','');
+  toggleWrap.id='text-toggle';
+  const hBtn=el('button','tt-btn'+(isH?' on':''),'Header');
+  const cBtn=el('button','tt-btn'+(!isH?' on':''),'Content');
+  hBtn.onclick=()=>{activeSeg='header'; buildPanel('text');};
+  cBtn.onclick=()=>{activeSeg='content'; buildPanel('text');};
+  toggleWrap.append(hBtn,cBtn);
+  ps.appendChild(toggleWrap);
 
-let openSheet = null;
-
-function showSheet(id) {
-  if (openSheet && openSheet !== id) {
-    $(openSheet).classList.remove('open');
+  // ── Text input ──
+  sec('Text');
+  if(isH){
+    const inp=el('input','t-in'); inp.type='text'; inp.value=c.title; inp.placeholder='Header text…';
+    inp.oninput=e=>{cards[idx].title=e.target.value;render();};
+    ps.appendChild(inp);
+  } else {
+    const ta=el('textarea','t-in'); ta.rows=3; ta.value=c.content; ta.placeholder='Content text…';
+    ta.oninput=e=>{cards[idx].content=e.target.value;render();};
+    ps.appendChild(ta);
   }
-  $(id).classList.add('open');
-  openSheet = id;
-}
-function hideSheet(id) {
-  $(id).classList.remove('open');
-  if (openSheet === id) openSheet = null;
-}
 
-$('closeHeader').onclick  = () => hideSheet('headerSheet');
-$('closeContent').onclick = () => hideSheet('contentSheet');
-$('closeLogo').onclick    = () => hideSheet('logoSheet');
-
-// close sheet on grip tap
-['headerSheet','contentSheet','logoSheet'].forEach(id => {
-  $(id).querySelector('.sheet-grip').addEventListener('click', () => hideSheet(id));
-});
-
-// ─── TOOLBAR ACTIONS ─────────────────────────────────────────────────────────
-
-document.querySelectorAll('[data-action]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const a = btn.dataset.action;
-    const c = cards[idx];
-    hidePicker();
-
-    if (a === 'header') {
-      $('titleInput').value = c.title;
-      $('hSize').value = c.hSize;
-      $('hBold').classList.toggle('on', c.hBold);
-      $('hItalic').classList.toggle('on', c.hItalic);
-      $('divToggle').checked = c.div;
-      document.querySelectorAll('[data-ah]').forEach(b => b.classList.toggle('on', b.dataset.ah === c.hAlign));
-      buildFonts('hFontRow', () => c.hFont, k => { cards[idx].hFont = k; });
-      buildSwatches('hColorRow', TXT_C, () => c.hColor, col => { cards[idx].hColor = col; });
-      showSheet('headerSheet');
-    }
-    else if (a === 'content') {
-      $('contentInput').value = c.content;
-      $('cSize').value = c.cSize;
-      $('wmInput').value = c.watermark;
-      $('cBold').classList.toggle('on', c.cBold);
-      $('cItalic').classList.toggle('on', c.cItalic);
-      document.querySelectorAll('[data-ac]').forEach(b => b.classList.toggle('on', b.dataset.ac === c.cAlign));
-      document.querySelectorAll('[data-va]').forEach(b => b.classList.toggle('on', b.dataset.va === c.cVA));
-      buildFonts('cFontRow', () => c.cFont, k => { cards[idx].cFont = k; });
-      buildSwatches('cColorRow', TXT_C, () => c.cColor, col => { cards[idx].cColor = col; });
-      showSheet('contentSheet');
-    }
-    else if (a === 'logo') {
-      $('logoSize').value = c.lsz;
-      showSheet('logoSheet');
-    }
-    else if (a === 'bg') {
-      // Original floating bubble picker for backgrounds
-      const items = Object.keys(BG).map(id => ({
-        color: BG_MID[id],
-        selected: id === c.bg,
-        action: () => { cards[idx].bg = id; },
-      }));
-      showPicker(items);
-    }
-    else if (a === 'border') {
-      // Border: first show width bubbles as label-circles
-      const widths = [
-        {w:'0',  l:'None'},
-        {w:'4',  l:'Thin'},
-        {w:'8',  l:'Med'},
-        {w:'14', l:'Thick'},
-      ];
-      const wItems = widths.map(({w, l}) => ({
-        isLabel: true, label: l,
-        selected: c.bw === w,
-        action: () => { cards[idx].bw = w; },
-      }));
-      // then colour swatches
-      const cItems = BDR_C.map(col => ({
-        color: col,
-        selected: c.bc === col,
-        action: () => { cards[idx].bc = col; },
-      }));
-      showPicker([...wItems, ...cItems]);
-    }
-    else if (a === 'aspect') {
-      const opts = [
-        {cls:'aspect-1-1',  l:'1:1'},
-        {cls:'aspect-3-4',  l:'3:4'},
-        {cls:'aspect-4-3',  l:'4:3'},
-        {cls:'aspect-16-9', l:'16:9'},
-        {cls:'aspect-9-16', l:'9:16'},
-      ];
-      const items = opts.map(o => ({
-        isLabel: true, label: o.l,
-        selected: c.aspect === o.cls,
-        action: () => { cards[idx].aspect = o.cls; },
-      }));
-      showPicker(items);
-    }
-    else if (a === 'addCard') {
-      const n = mk();
-      Object.assign(n, {
-        bg: c.bg, aspect: c.aspect,
-        hFont: c.hFont, hColor: c.hColor,
-        cFont: c.cFont, cColor: c.cColor,
-        bw: c.bw, bc: c.bc,
-        title: '', content: '',
-      });
-      cards.push(n);
-      idx = cards.length - 1;
-      render();
-    }
-  });
-});
-
-// ─── BUILD UI HELPERS ────────────────────────────────────────────────────────
-
-function buildFonts(cid, getCur, onPick) {
-  const r = $(cid); r.innerHTML = '';
-  FONTS.forEach(f => {
-    const b = document.createElement('button');
-    b.className = 'fpill' + (f.k === getCur() ? ' on' : '');
-    b.textContent = f.l;
-    b.style.fontFamily = f.c;
-    b.onclick = () => {
-      onPick(f.k);
-      r.querySelectorAll('.fpill').forEach(x => x.classList.remove('on'));
-      b.classList.add('on');
-      render();
+  // ── Font ──
+  sec('Font');
+  const fr=el('div','font-wrap');
+  FONTS.forEach(f=>{
+    const b=el('button','fp'+(((isH?c.hFont:c.cFont)===f.k)?' on':''),f.l);
+    b.style.fontFamily=f.c;
+    b.onclick=()=>{
+      if(isH) cards[idx].hFont=f.k; else cards[idx].cFont=f.k;
+      fr.querySelectorAll('.fp').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); render();
     };
-    r.appendChild(b);
+    fr.appendChild(b);
   });
-}
+  ps.appendChild(fr);
 
-function buildSwatches(cid, pal, getCur, onPick) {
-  const r = $(cid); r.innerHTML = '';
-  pal.forEach(col => {
-    const s = document.createElement('button');
-    s.className = 'sw' + (col === getCur() ? ' on' : '');
-    s.style.background = col;
-    const light = ['#ffffff','#f8f4ff','#fde68a','#fbcfe8','#fca5a5','#6ee7b7','#93c5fd'];
-    if (light.includes(col)) s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.13)';
-    s.onclick = () => {
-      onPick(col);
-      r.querySelectorAll('.sw').forEach(x => x.classList.remove('on'));
-      s.classList.add('on');
-      render();
-    };
-    r.appendChild(s);
-  });
-}
-
-// ─── LIVE INPUTS ─────────────────────────────────────────────────────────────
-
-$('titleInput').oninput   = e => { cards[idx].title     = e.target.value; render(); };
-$('contentInput').oninput = e => { cards[idx].content   = e.target.value; render(); };
-$('wmInput').oninput      = e => { cards[idx].watermark = e.target.value; render(); };
-$('hSize').oninput        = e => { cards[idx].hSize = +e.target.value; render(); };
-$('cSize').oninput        = e => { cards[idx].cSize = +e.target.value; render(); };
-$('divToggle').onchange   = e => { cards[idx].div = e.target.checked; render(); };
-
-const tog = (id, key) => {
-  $(id).onclick = () => {
-    cards[idx][key] = !cards[idx][key];
-    $(id).classList.toggle('on', cards[idx][key]);
+  // ── Size ──
+  sec('Size');
+  const slRow=el('div','sl');
+  const slIco1=el('span','material-symbols-outlined sl-i','text_decrease');
+  const slider=document.createElement('input'); slider.type='range';
+  slider.min=isH?'12':'8'; slider.max=isH?'72':'38';
+  slider.value=isH?c.hSize:c.cSize;
+  slider.oninput=e=>{
+    if(isH) cards[idx].hSize=+e.target.value; else cards[idx].cSize=+e.target.value;
     render();
   };
-};
-tog('hBold','hBold'); tog('hItalic','hItalic');
-tog('cBold','cBold'); tog('cItalic','cItalic');
+  const slIco2=el('span','material-symbols-outlined sl-i','text_increase');
+  slRow.append(slIco1,slider,slIco2); ps.appendChild(slRow);
 
-document.querySelectorAll('[data-ah]').forEach(b => {
-  b.onclick = () => {
-    cards[idx].hAlign = b.dataset.ah;
-    document.querySelectorAll('[data-ah]').forEach(x => x.classList.remove('on'));
-    b.classList.add('on'); render();
-  };
-});
-document.querySelectorAll('[data-ac]').forEach(b => {
-  b.onclick = () => {
-    cards[idx].cAlign = b.dataset.ac;
-    document.querySelectorAll('[data-ac]').forEach(x => x.classList.remove('on'));
-    b.classList.add('on'); render();
-  };
-});
-document.querySelectorAll('[data-va]').forEach(b => {
-  b.onclick = () => {
-    cards[idx].cVA = b.dataset.va;
-    document.querySelectorAll('[data-va]').forEach(x => x.classList.remove('on'));
-    b.classList.add('on'); render();
-  };
-});
+  // ── Style ──
+  sec('Style');
+  const sr=el('div','i-row');
+  const boldKey=isH?'hBold':'cBold', italicKey=isH?'hItalic':'cItalic';
+  const boldBtn=iBtn('format_bold','Bold',c[boldKey]);
+  const italBtn=iBtn('format_italic','Italic',c[italicKey]);
+  boldBtn.onclick=()=>{cards[idx][boldKey]=!cards[idx][boldKey];boldBtn.classList.toggle('on',cards[idx][boldKey]);render();};
+  italBtn.onclick=()=>{cards[idx][italicKey]=!cards[idx][italicKey];italBtn.classList.toggle('on',cards[idx][italicKey]);render();};
+  sr.append(boldBtn,italBtn); ps.appendChild(sr);
 
-// ─── LOGO ────────────────────────────────────────────────────────────────────
-
-$('uploadBox').onclick = () => $('logoFile').click();
-$('logoFile').onchange = () => {
-  const f = $('logoFile').files[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = e => {
-    Object.assign(cards[idx], { logo: e.target.result, lsz: 70, lx: 14, ly: 14 });
-    render(); hideSheet('logoSheet');
-  };
-  r.readAsDataURL(f);
-};
-$('logoSize').oninput = e => { cards[idx].lsz = +e.target.value; render(); };
-$('rmvLogo').onclick  = () => { cards[idx].logo = null; render(); };
-
-document.querySelectorAll('[data-p]').forEach(b => {
-  b.onclick = () => {
-    const c = cards[idx];
-    const W = CP.offsetWidth, H = CP.offsetHeight;
-    const lw = c.lsz;
-    const lh = LI.naturalHeight ? (lw / LI.naturalWidth) * LI.naturalHeight : lw;
-    const p = 12;
-    const POS = {
-      tl:{x:p,y:p}, tc:{x:(W-lw)/2,y:p}, tr:{x:W-lw-p,y:p},
-      ml:{x:p,y:(H-lh)/2}, mc:{x:(W-lw)/2,y:(H-lh)/2}, mr:{x:W-lw-p,y:(H-lh)/2},
-      bl:{x:p,y:H-lh-p}, bc:{x:(W-lw)/2,y:H-lh-p}, br:{x:W-lw-p,y:H-lh-p},
-    }[b.dataset.p];
-    if (POS) {
-      cards[idx].lx = Math.max(0, POS.x);
-      cards[idx].ly = Math.max(0, POS.y);
-      render();
-    }
-  };
-});
-
-// Logo drag
-(() => {
-  let drag=false, sx, sy, ox, oy;
-  const start = e => {
-    if (e.target.id === 'logoResizeHandle') return;
-    e.preventDefault(); drag = true;
-    const pt = e.touches ? e.touches[0] : e;
-    sx = pt.clientX; sy = pt.clientY;
-    ox = cards[idx].lx; oy = cards[idx].ly;
-  };
-  const move = e => {
-    if (!drag) return; e.preventDefault();
-    const pt = e.touches ? e.touches[0] : e;
-    const rc = CP.getBoundingClientRect();
-    const scx = CP.offsetWidth / rc.width, scy = CP.offsetHeight / rc.height;
-    const lw = cards[idx].lsz;
-    const nx = Math.max(0, Math.min(ox + (pt.clientX-sx)*scx, CP.offsetWidth-lw));
-    const ny = Math.max(0, Math.min(oy + (pt.clientY-sy)*scy, CP.offsetHeight-20));
-    cards[idx].lx = nx; cards[idx].ly = ny;
-    LO.style.left = nx+'px'; LO.style.top = ny+'px';
-  };
-  const end = () => { drag = false; };
-  LO.addEventListener('mousedown',  start);
-  LO.addEventListener('touchstart', start, {passive:false});
-  document.addEventListener('mousemove',  move);
-  document.addEventListener('touchmove',  move, {passive:false});
-  document.addEventListener('mouseup',    end);
-  document.addEventListener('touchend',   end);
-})();
-
-// Logo resize
-(() => {
-  let r=false, sx, ss;
-  const h = $('logoResizeHandle');
-  h.addEventListener('mousedown', e => { e.stopPropagation(); r=true; sx=e.clientX; ss=cards[idx].lsz; });
-  document.addEventListener('mousemove', e => {
-    if (!r) return;
-    const ns = Math.max(18, Math.min(ss + (e.clientX-sx), 240));
-    cards[idx].lsz = ns; LI.style.width = ns+'px'; $('logoSize').value = ns;
+  // ── Alignment ──
+  sec('Alignment');
+  const ar=el('div','i-row');
+  const alignKey=isH?'hAlign':'cAlign';
+  [['format_align_left','L','left'],['format_align_center','C','center'],['format_align_right','R','right']].forEach(([ic,,v])=>{
+    const b=iBtn(ic,v,c[alignKey]===v);
+    b.onclick=()=>{cards[idx][alignKey]=v;ar.querySelectorAll('.ib').forEach(x=>x.classList.remove('on'));b.classList.add('on');render();};
+    ar.appendChild(b);
   });
-  document.addEventListener('mouseup', () => { r = false; });
-})();
+  ps.appendChild(ar);
+
+  // Content-only: Vertical position
+  if(!isH){
+    sec('Vertical');
+    const vr=el('div','i-row');
+    [['vertical_align_top','Top','top'],['vertical_align_center','Mid','center'],['vertical_align_bottom','Bot','bottom']].forEach(([ic,l,v])=>{
+      const b=iBtn(ic,l,c.cVA===v);
+      b.onclick=()=>{cards[idx].cVA=v;vr.querySelectorAll('.ib').forEach(x=>x.classList.remove('on'));b.classList.add('on');render();};
+      vr.appendChild(b);
+    });
+    ps.appendChild(vr);
+  }
+
+  // ── Color ──
+  sec('Color');
+  swatchRow(TC, isH?c.hColor:c.cColor, col=>{
+    if(isH) cards[idx].hColor=col; else cards[idx].cColor=col;
+  });
+
+  // ── Header extras ──
+  if(isH){
+    sec('Separator');
+    const tg=el('label','tog');
+    const chk=document.createElement('input'); chk.type='checkbox'; chk.checked=c.div;
+    chk.onchange=e=>{cards[idx].div=e.target.checked;render();};
+    const sp=el('span','','Show divider line');
+    tg.append(chk,sp); ps.appendChild(tg);
+  } else {
+    // Watermark in content section
+    sec('Watermark');
+    const wm=el('input','t-in'); wm.type='text'; wm.value=c.watermark; wm.placeholder='@yourbrand (optional)';
+    wm.oninput=e=>{cards[idx].watermark=e.target.value;render();};
+    ps.appendChild(wm);
+  }
+}
+
+// ── BG PANEL ─────────────────────────────────────────────────────────────────
+function buildBgPanel(){
+  const c=cards[idx];
+  sec('Gradient');
+  const wrap=el('div','bg-wrap');
+  Object.keys(GR).forEach(id=>{
+    const s=el('button','bg-sw'+(id===c.bg?' on':''));
+    s.style.background=GR[id];
+    s.onclick=()=>{cards[idx].bg=id;wrap.querySelectorAll('.bg-sw').forEach(x=>x.classList.remove('on'));s.classList.add('on');render();};
+    wrap.appendChild(s);
+  });
+  ps.appendChild(wrap);
+}
+
+// ── BORDER PANEL ─────────────────────────────────────────────────────────────
+function buildBorderPanel(){
+  const c=cards[idx];
+  sec('Width');
+  const wr=el('div','i-row');
+  [['0','None'],['4','Thin'],['8','Med'],['14','Thick']].forEach(([w,l])=>{
+    const b=iBtn('',l,c.bw===w);
+    b.querySelector('.material-symbols-outlined').remove();
+    b.onclick=()=>{cards[idx].bw=w;wr.querySelectorAll('.ib').forEach(x=>x.classList.remove('on'));b.classList.add('on');render();};
+    wr.appendChild(b);
+  });
+  ps.appendChild(wr);
+
+  sec('Color');
+  swatchRow(BC, c.bc, col=>{ cards[idx].bc=col; });
+}
+
+// ── RATIO PANEL ──────────────────────────────────────────────────────────────
+function buildRatioPanel(){
+  const c=cards[idx];
+  sec('Aspect Ratio');
+  const rr=el('div','i-row'); rr.style.flexWrap='wrap'; rr.style.gap='5px';
+  [
+    ['ar-1-1','1:1','crop_square'],['ar-3-4','3:4','crop_portrait'],
+    ['ar-4-3','4:3','crop_landscape'],['ar-16-9','16:9','crop_16_9'],
+    ['ar-9-16','9:16','stay_current_portrait'],
+  ].forEach(([cls,l,ic])=>{
+    const b=iBtn(ic,l,c.aspect===cls);
+    b.onclick=()=>{cards[idx].aspect=cls;rr.querySelectorAll('.ib').forEach(x=>x.classList.remove('on'));b.classList.add('on');render();};
+    rr.appendChild(b);
+  });
+  ps.appendChild(rr);
+}
+
+// ── LOGO PANEL ───────────────────────────────────────────────────────────────
+function buildLogoPanel(){
+  const c=cards[idx];
+
+  sec('Upload');
+  const box=el('div','up-box');
+  box.innerHTML=`<span class="material-symbols-outlined" style="font-size:26px;color:#6b7280;display:block;margin-bottom:4px;">upload_file</span><p style="font-size:12px;font-weight:600;color:#6b7280;">Tap to upload logo</p><p style="font-size:10px;color:#9ca3af;margin-top:2px;">PNG · JPG · SVG · WebP</p>`;
+  const fi=document.createElement('input'); fi.type='file'; fi.accept='image/*'; fi.style.display='none';
+  fi.onchange=()=>{
+    const f=fi.files[0]; if(!f) return;
+    const r=new FileReader(); r.onload=e=>{Object.assign(cards[idx],{logo:e.target.result,lsz:55,lx:10,ly:10});render();buildLogoPanel();};
+    r.readAsDataURL(f);
+  };
+  box.appendChild(fi); box.onclick=()=>fi.click(); ps.appendChild(box);
+
+  sec('Size');
+  const slRow=el('div','sl');
+  const s1=el('span','material-symbols-outlined sl-i','photo_size_select_small');
+  const sl=document.createElement('input'); sl.type='range'; sl.min='20'; sl.max='200'; sl.value=c.lsz;
+  sl.oninput=e=>{cards[idx].lsz=+e.target.value;render();};
+  const s2=el('span','material-symbols-outlined sl-i','photo_size_select_large');
+  slRow.append(s1,sl,s2); ps.appendChild(slRow);
+
+  sec('Position');
+  const pg=el('div','pos-grid');
+  [['tl','top:3px;left:3px'],['tc','top:3px;left:50%;transform:translateX(-50%)'],['tr','top:3px;right:3px'],
+   ['ml','top:50%;transform:translateY(-50%);left:3px'],['mc','top:50%;left:50%;transform:translate(-50%,-50%)'],['mr','top:50%;transform:translateY(-50%);right:3px'],
+   ['bl','bottom:3px;left:3px'],['bc','bottom:3px;left:50%;transform:translateX(-50%)'],['br','bottom:3px;right:3px']
+  ].forEach(([p,ds])=>{
+    const b=el('button','pos-b'); b.dataset.p=p;
+    const dot=el('span','pdot'); dot.style.cssText=ds+';';
+    b.appendChild(dot);
+    b.onclick=()=>{
+      const W=CARD.offsetWidth, H=CARD.offsetHeight, lw=cards[idx].lsz;
+      const lh=LI.naturalHeight?(lw/LI.naturalWidth)*LI.naturalHeight:lw, pd=10;
+      const POS={tl:{x:pd,y:pd},tc:{x:(W-lw)/2,y:pd},tr:{x:W-lw-pd,y:pd},
+                 ml:{x:pd,y:(H-lh)/2},mc:{x:(W-lw)/2,y:(H-lh)/2},mr:{x:W-lw-pd,y:(H-lh)/2},
+                 bl:{x:pd,y:H-lh-pd},bc:{x:(W-lw)/2,y:H-lh-pd},br:{x:W-lw-pd,y:H-lh-pd}}[p];
+      if(POS){cards[idx].lx=Math.max(0,POS.x);cards[idx].ly=Math.max(0,POS.y);render();}
+    };
+    pg.appendChild(b);
+  });
+  ps.appendChild(pg);
+  const hint=el('p','','Drag the logo on the card above ↑');
+  hint.style.cssText='font-size:10px;color:#6b7280;text-align:center;margin-top:6px;';
+  ps.appendChild(hint);
+
+  if(c.logo){
+    const rb=el('button','rmv','🗑 Remove Logo');
+    rb.onclick=()=>{cards[idx].logo=null;render();buildLogoPanel();};
+    ps.appendChild(rb);
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function el(tag, cls='', text=''){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text) e.textContent=text;
+  return e;
+}
+function sec(label){
+  const s=el('div','sec',label); ps.appendChild(s);
+}
+function iBtn(icon, label, active=false){
+  const b=el('button','ib'+(active?' on':''));
+  if(icon){ const ic=el('span','material-symbols-outlined',icon); b.appendChild(ic); }
+  if(label){ const sp=el('span','',label); b.appendChild(sp); }
+  return b;
+}
+function swatchRow(pal, current, onPick){
+  const row=el('div','sw-row');
+  pal.forEach(col=>{
+    const s=el('button','sw'+(col===current?' on':''));
+    s.style.background=col;
+    const light=['#ffffff','#f8f4ff','#fde68a','#fbcfe8','#fca5a5','#6ee7b7','#93c5fd'];
+    if(light.includes(col)) s.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.13)';
+    s.onclick=()=>{
+      onPick(col);
+      row.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));
+      s.classList.add('on'); render();
+    };
+    row.appendChild(s);
+  });
+  ps.appendChild(row);
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const tab=t.dataset.tab;
+    if(tab==='new'){
+      const c=cards[idx], n=mk();
+      Object.assign(n,{bg:c.bg,aspect:c.aspect,hFont:c.hFont,hColor:c.hColor,cFont:c.cFont,cColor:c.cColor,bw:c.bw,bc:c.bc,title:'',content:''});
+      cards.push(n); idx=cards.length-1; render(); return;
+    }
+    if(curTab===tab){ closePanel(); return; } // toggle off
+    openPanel(tab);
+  });
+});
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
-
-$('prevBtn').onclick = () => { if (idx > 0) { idx--; render(); } };
-$('nextBtn').onclick = () => { if (idx < cards.length-1) { idx++; render(); } };
-
-document.addEventListener('keydown', e => {
-  if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-  if (e.key === 'ArrowLeft'  && idx > 0)               { idx--; render(); }
-  if (e.key === 'ArrowRight' && idx < cards.length-1)  { idx++; render(); }
-  if (e.key === 'Escape') { hidePicker(); }
+$('prev-btn').onclick=()=>{if(idx>0){idx--;render();}};
+$('next-btn').onclick=()=>{if(idx<cards.length-1){idx++;render();}};
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
+  if(e.key==='ArrowLeft'&&idx>0){idx--;render();}
+  if(e.key==='ArrowRight'&&idx<cards.length-1){idx++;render();}
+  if(e.key==='Escape')closePanel();
 });
+
+// ─── LOGO DRAG ───────────────────────────────────────────────────────────────
+(()=>{
+  let dr=false,sx,sy,ox,oy;
+  const s=e=>{if(e.target.id==='logo-rz')return;e.preventDefault();dr=true;const p=e.touches?e.touches[0]:e;sx=p.clientX;sy=p.clientY;ox=cards[idx].lx;oy=cards[idx].ly;};
+  const m=e=>{
+    if(!dr)return;e.preventDefault();const p=e.touches?e.touches[0]:e;
+    const rc=CARD.getBoundingClientRect();
+    const scx=CARD.offsetWidth/rc.width,scy=CARD.offsetHeight/rc.height;
+    const lw=cards[idx].lsz;
+    const nx=Math.max(0,Math.min(ox+(p.clientX-sx)*scx,CARD.offsetWidth-lw));
+    const ny=Math.max(0,Math.min(oy+(p.clientY-sy)*scy,CARD.offsetHeight-20));
+    cards[idx].lx=nx;cards[idx].ly=ny;LO.style.left=nx+'px';LO.style.top=ny+'px';
+  };
+  const u=()=>{dr=false;};
+  LO.addEventListener('mousedown',s);LO.addEventListener('touchstart',s,{passive:false});
+  document.addEventListener('mousemove',m);document.addEventListener('touchmove',m,{passive:false});
+  document.addEventListener('mouseup',u);document.addEventListener('touchend',u);
+})();
+(()=>{
+  let r=false,sx,ss;
+  $('logo-rz').addEventListener('mousedown',e=>{e.stopPropagation();r=true;sx=e.clientX;ss=cards[idx].lsz;});
+  document.addEventListener('mousemove',e=>{if(!r)return;const ns=Math.max(16,Math.min(ss+(e.clientX-sx),220));cards[idx].lsz=ns;LI.style.width=ns+'px';});
+  document.addEventListener('mouseup',()=>{r=false;});
+})();
 
 // ─── DOWNLOAD ────────────────────────────────────────────────────────────────
-
-$('downloadBtn').addEventListener('click', () => {
-  const hide = [$('downloadBtn'), $('prevBtn'), $('nextBtn'), CC];
-  hide.forEach(el => el.style.visibility = 'hidden');
-  html2canvas(CP, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false })
-    .then(canvas => {
-      canvas.toBlob(blob => {
-        const a = document.createElement('a');
-        a.download = (cards[idx].title || 'flashcard') + '.png';
-        a.href = URL.createObjectURL(blob);
-        a.click();
-        hide.forEach(el => el.style.visibility = '');
-      }, 'image/png');
-    });
+$('dl-btn').addEventListener('click',()=>{
+  const hide=[$('dl-btn'),$('prev-btn'),$('next-btn'),COUNTER];
+  hide.forEach(e=>e.style.visibility='hidden');
+  html2canvas(CARD,{scale:3,useCORS:true,allowTaint:true,backgroundColor:null,logging:false}).then(canvas=>{
+    canvas.toBlob(blob=>{
+      const a=document.createElement('a');a.download=(cards[idx].title||'flashcard')+'.png';
+      a.href=URL.createObjectURL(blob);a.click();
+      hide.forEach(e=>e.style.visibility='');
+    },'image/png');
+  });
 });
-
-// ─── INIT ────────────────────────────────────────────────────────────────────
 
 render();
 </script>
