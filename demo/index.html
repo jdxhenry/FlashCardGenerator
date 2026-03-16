@@ -1,498 +1,1027 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Flashcard Generator</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FlashCard Maker</title>
 
-  <!-- Fonts & Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&family=Roboto+Mono:wght@400;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200" rel="stylesheet" />
-
-  <!-- Tailwind CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&family=Merriweather:wght@400;700&family=Space+Grotesk:wght@400;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- html2canvas for download -->
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          colors: {
-            primary: "#3b82f6",
-          },
-          fontFamily: {
-            display: ["Inter", "sans-serif"],
-            serif: ["Merriweather", "serif"],
-            mono: ["Roboto Mono", "monospace"],
-            elegant: ["Playfair Display", "serif"],
-          },
-        },
-      },
+          colors: { primary: "#6366f1" },
+        }
+      }
     }
   </script>
 
   <style>
-    body { min-height: 100dvh; }
-    .aspect-1-1 { aspect-ratio: 1/1; }
-    .aspect-3-4 { aspect-ratio: 3/4; }
+    :root { --primary: #6366f1; }
+
+    body { min-height: 100dvh; background: #f0efff; }
+
+    /* ── Aspect ratios ── */
+    .aspect-1-1  { aspect-ratio: 1/1; }
+    .aspect-3-4  { aspect-ratio: 3/4; }
+    .aspect-4-3  { aspect-ratio: 4/3; }
     .aspect-16-9 { aspect-ratio: 16/9; }
     .aspect-9-16 { aspect-ratio: 9/16; }
+
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* Overlay arrows styling */
+    /* ── Nav arrows — original style ── */
     .nav-overlay {
       position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      padding: 12px;
-      border-radius: 9999px;
-      background: rgba(0,0,0,0.3);
+      top: 50%; transform: translateY(-50%);
+      padding: 10px; border-radius: 9999px;
+      background: rgba(0,0,0,0.28); backdrop-filter: blur(8px);
+      color: white; opacity: 0;
+      transition: opacity 0.25s; z-index: 20;
+      cursor: pointer; border: none; display: none;
+    }
+    .has-multiple .nav-overlay { display: block !important; }
+    .has-multiple:hover .nav-overlay { opacity: 0.7; }
+    .has-multiple:hover .nav-overlay:hover { opacity: 1; }
+
+    /* ── Logo overlay ── */
+    #logoOverlay {
+      position: absolute; cursor: grab;
+      user-select: none; z-index: 15; touch-action: none;
+    }
+    #logoOverlay:active { cursor: grabbing; }
+    #logoOverlay img { display: block; border-radius: 4px; }
+    .logo-handle {
+      position: absolute; bottom: -6px; right: -6px;
+      width: 14px; height: 14px; background: white;
+      border: 2px solid var(--primary); border-radius: 3px;
+      cursor: se-resize;
+    }
+
+    /* ── Floating picker (original style) ── */
+    #floatPicker {
+      position: fixed; inset: 0; z-index: 50;
+      display: none; align-items: flex-end;
+      background: rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    #floatPicker.show {
+      display: flex;
+      pointer-events: all;
+    }
+    #pickerInner {
+      width: 100%; pointer-events: all;
+      padding: 0 0 88px;
+    }
+    #pickerScroll {
+      overflow-x: auto; white-space: nowrap;
+      padding: 14px 20px;
+    }
+    #pickerScroll::-webkit-scrollbar { display: none; }
+    #pickerItems { display: inline-flex; gap: 14px; align-items: center; }
+
+    /* Original picker circle */
+    .pcircle {
+      width: 52px; height: 52px; border-radius: 50%;
+      flex-shrink: 0; cursor: pointer; border: 4px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .pcircle:hover { transform: scale(1.12); }
+    .pcircle.sel {
+      border-color: white;
+      box-shadow: 0 0 0 3px white, 0 0 0 5px rgba(255,255,255,0.5), 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .pcircle.sel::after {
+      content: '✓'; color: white; font-size: 18px;
+      font-weight: 900; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    }
+    /* text-label circles (for font/border width) */
+    .pcircle.label-style {
+      background: rgba(255,255,255,0.2) !important;
       backdrop-filter: blur(8px);
-      color: white;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 20;
+      border: 2px solid rgba(255,255,255,0.35) !important;
+      font-size: 11px; font-weight: 700; color: white;
+      font-family: 'Space Grotesk', sans-serif;
     }
 
-    .has-multiple #cardPreview:hover .nav-overlay {
-      opacity: 0.7;
+    /* ── Edit mini-sheet — peeks up, card still visible ── */
+    .mini-sheet {
+      position: fixed; left: 0; right: 0;
+      bottom: 68px; /* sits just above toolbar */
+      z-index: 48;
+      background: white;
+      border-radius: 22px 22px 0 0;
+      box-shadow: 0 -4px 32px rgba(99,102,241,0.18);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+      /* Max height so it doesn't go all the way up */
+      max-height: 52vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .mini-sheet.open { transform: translateY(0); }
+
+    .sheet-grip {
+      flex-shrink: 0; padding: 10px 0 4px;
+      display: flex; justify-content: center; cursor: pointer;
+    }
+    .sheet-grip::after {
+      content: ''; width: 38px; height: 4px;
+      background: #d1d5db; border-radius: 9px;
+    }
+    .sheet-topbar {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 2px 16px 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .sheet-topbar h3 {
+      font-size: 15px; font-weight: 800;
+      color: #1e1b4b; font-family: 'Space Grotesk', sans-serif;
+    }
+    .sheet-done {
+      padding: 6px 18px; border-radius: 20px;
+      background: var(--primary); color: white;
+      font-weight: 700; font-size: 13px; border: none; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .sheet-body {
+      flex: 1; overflow-y: auto; padding: 10px 16px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sheet-body::-webkit-scrollbar { width: 3px; }
+    .sheet-body::-webkit-scrollbar-thumb { background: #e5e3ff; border-radius: 3px; }
+
+    /* ── Sheet internals ── */
+    .s-label {
+      font-size: 10px; font-weight: 700; color: #6b7280;
+      text-transform: uppercase; letter-spacing: .07em;
+      display: flex; align-items: center; gap: 8px;
+      margin: 10px 0 6px;
+    }
+    .s-label::after { content: ''; flex: 1; height: 1px; background: #e5e3ff; }
+    .s-label:first-child { margin-top: 0; }
+
+    .s-input {
+      width: 100%; padding: 9px 12px; border-radius: 12px;
+      background: #f8f7ff; border: 1.5px solid #e5e3ff;
+      font-size: 14px; color: #1e1b4b; outline: none;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: border-color .18s;
+    }
+    .s-input:focus { border-color: var(--primary); }
+    textarea.s-input { resize: none; min-height: 68px; line-height: 1.55; }
+
+    .font-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fpill {
+      padding: 6px 13px; border-radius: 20px;
+      border: 1.5px solid #e5e3ff; font-size: 12px; font-weight: 600;
+      cursor: pointer; background: #f8f7ff; color: #1e1b4b;
+      transition: all .14s; white-space: nowrap;
+    }
+    .fpill.on { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+
+    .sl-row { display: flex; align-items: center; gap: 8px; }
+    .sl-ico { font-size: 15px; color: #6b7280; flex-shrink: 0; }
+    input[type=range] {
+      -webkit-appearance: none; flex: 1; height: 5px;
+      border-radius: 3px; background: #e5e3ff; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--primary); cursor: pointer;
+      box-shadow: 0 1px 6px rgba(99,102,241,.38);
     }
 
-    .has-multiple #cardPreview:hover .nav-overlay:hover {
-      opacity: 1;
+    .btn-row { display: flex; gap: 5px; }
+    .s-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 7px 4px; border-radius: 10px; gap: 2px;
+      background: #f8f7ff; border: 1.5px solid #e5e3ff;
+      cursor: pointer; font-size: 9.5px; font-weight: 600;
+      color: #6b7280; transition: all .13s;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .s-btn .material-symbols-outlined { font-size: 17px; }
+    .s-btn.on { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+
+    /* color swatches inside sheet */
+    .swatch-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .sw {
+      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+      border: 2.5px solid transparent; transition: transform .13s;
+      position: relative; flex-shrink: 0;
+    }
+    .sw:active { transform: scale(1.2); }
+    .sw.on {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+    }
+    .sw.on::after {
+      content: '✓'; position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: white; font-weight: 800;
+      text-shadow: 0 1px 3px rgba(0,0,0,.5);
     }
 
-    .has-multiple .nav-overlay.disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
+    .tog-row {
+      display: flex; align-items: center; gap: 9px; cursor: pointer; padding: 5px 0;
+    }
+    .tog-row input { width: 15px; height: 15px; accent-color: var(--primary); }
+    .tog-row span { font-size: 13px; color: #1e1b4b; }
+
+    /* Logo sheet extras */
+    .upload-area {
+      border: 2px dashed #e5e3ff; border-radius: 14px;
+      padding: 20px; text-align: center; cursor: pointer;
+      background: #f8f7ff; transition: border-color .18s;
+    }
+    .upload-area:active { border-color: var(--primary); }
+    .pos-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 5px;
+      background: #f8f7ff; border-radius: 12px;
+      padding: 8px; border: 1.5px solid #e5e3ff;
+    }
+    .pos-btn {
+      height: 32px; border-radius: 7px;
+      border: 1.5px solid #e5e3ff; background: white;
+      cursor: pointer; position: relative; transition: all .12s;
+    }
+    .pos-btn:active { border-color: var(--primary); background: #ede9fe; }
+    .pdot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); position: absolute; }
+    .rmv-btn {
+      width: 100%; padding: 10px; border-radius: 12px;
+      border: 1.5px solid #fecaca; background: #fff5f5;
+      color: #ef4444; font-weight: 700; font-size: 13px;
+      cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+      margin-top: 8px;
     }
 
-    .has-multiple .nav-overlay {
-      display: block !important;
+    /* ── Toolbar (original style) ── */
+    #toolbar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 49;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-top: 1px solid rgba(99,102,241,0.12);
+      box-shadow: 0 -4px 24px rgba(99,102,241,0.1);
     }
+    .tb-inner {
+      max-width: 520px; margin: 0 auto;
+      padding: 6px 8px 8px;
+      display: flex; justify-content: space-around; align-items: center;
+    }
+    .tb-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      color: #64748b; background: none; border: none; cursor: pointer;
+      padding: 4px 6px; border-radius: 9px;
+      transition: color .15s, background .15s;
+      font-family: 'Space Grotesk', sans-serif; flex: 1;
+    }
+    .tb-btn:hover { color: var(--primary); }
+    .tb-btn.active { color: var(--primary); }
+    .tb-btn .material-symbols-outlined { font-size: 22px; }
+    .tb-btn .tbl { font-size: 9px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
   </style>
 </head>
-
 <body class="bg-gray-100 flex flex-col">
 
-  <!-- Preview Area -->
-  <main class="flex-1 flex flex-col items-center justify-center p-8 pb-20">
-    <div id="cardPreview" class="relative max-w-lg w-full bg-white rounded-3xl shadow-2xl overflow-hidden aspect-3-4 border-4 border-transparent group">
-      <div id="bgLayer" class="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-600"></div>
-      <div class="absolute inset-0 bg-white/10 backdrop-blur-[4px]"></div>
+<!-- ══════════ PREVIEW ══════════ -->
+<main class="flex-1 flex flex-col items-center justify-center p-6 pb-24 pt-8">
+  <div id="cardPreview"
+       class="relative w-full rounded-3xl shadow-2xl overflow-hidden aspect-3-4"
+       style="max-width:340px; border:4px solid transparent;">
 
-      <div class="relative z-10 flex flex-col justify-center items-center h-full px-8 py-12 text-center">
-        <h1 id="previewTitle" class="font-bold leading-tight font-elegant text-white">
-          Offline FlashCard Maker
-        </h1>
-        <p id="previewContent" class="mt-6 font-medium leading-relaxed font-display text-white">
-          Simply enter your Title and Content, choose your color, font, and background, then click Download—you’re done!
-        </p>
+    <div id="bgLayer" style="position:absolute;inset:0;background:linear-gradient(135deg,#7c3aed,#c026d3);"></div>
+    <div style="position:absolute;inset:0;background:rgba(255,255,255,0.08);pointer-events:none;z-index:2;"></div>
+
+    <!-- Card text content -->
+    <div id="cardContent" style="position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;padding:32px 28px;">
+      <div id="headerBlock">
+        <div id="previewTitle"
+             style="font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#fff;line-height:1.2;text-align:center;word-break:break-word;">
+          FlashCard Maker
+        </div>
       </div>
-
-      <div id="watermark" class="absolute bottom-4 left-4 opacity-50 hidden">
-        <span class="text-lg font-bold text-white">@henry</span>
+      <div id="previewDivider"
+           style="width:40px;height:3px;border-radius:9px;background:rgba(255,255,255,.5);margin:10px auto;display:none;"></div>
+      <div id="contentBlock" style="flex:1;display:flex;justify-content:center;">
+        <div id="previewContent"
+             style="font-family:'Inter',sans-serif;font-size:15px;color:#fff;text-align:center;line-height:1.65;width:100%;align-self:center;word-break:break-word;">
+          Tap Header or Content below to edit. Your changes appear here instantly!
+        </div>
       </div>
-
-      <!-- Overlay Navigation Arrows -->
-      <button id="prevOverlay" class="nav-overlay left-4 disabled:opacity-30">
-        <span class="material-symbols-outlined text-5xl">chevron_left</span>
-      </button>
-      <button id="nextOverlay" class="nav-overlay right-4 disabled:opacity-30">
-        <span class="material-symbols-outlined text-5xl">chevron_right</span>
-      </button>
-
-      <!-- Download Button in bottom-right corner -->
-      <button id="downloadBtn" class="absolute bottom-5 right-5 z-30 w-16 h-16 bg-white/90 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition">
-        <span class="material-symbols-outlined text-4xl text-primary">download</span>
-      </button>
     </div>
-  </main>
 
-  <!-- Bottom Toolbar -->
-  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-lg border-t border-gray-200/50 shadow-2xl">
-    <div class="max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
-	
-	   <button data-action="aspect" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">aspect_ratio</span>
-        <span class="text-xs font-medium">Ratio</span>
-      </button>
-	  
-      <button data-action="edit" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">edit_note</span>
-        <span class="text-xs font-medium">Edit</span>
-      </button>
+    <!-- Watermark -->
+    <div id="watermarkEl"
+         style="position:absolute;bottom:14px;left:14px;z-index:12;opacity:.5;font-weight:700;color:white;font-size:13px;pointer-events:none;display:none;"></div>
 
-      <button data-action="font" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">text_fields</span>
-        <span class="text-xs font-medium">Font</span>
-      </button>
-
-      <button data-action="textColor" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">palette</span>
-        <span class="text-xs font-medium">Color</span>
-      </button>
-
-      <button data-action="bgColor" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">format_color_fill</span>
-        <span class="text-xs font-medium">BG</span>
-      </button>
-
-      <button data-action="border" class="flex flex-col items-center gap-1 text-gray-700 hover:text-primary active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">border_outer</span>
-        <span class="text-xs font-medium">Border</span>
-      </button>
-
-         <button data-action="addCard" class="flex flex-col items-center gap-1 text-primary hover:text-blue-700 active:scale-95 transition">
-        <span class="material-symbols-outlined text-2xl">add_card</span>
-        <span class="text-xs font-medium">New</span>
-      </button>
+    <!-- Logo -->
+    <div id="logoOverlay" style="display:none;position:absolute;z-index:15;cursor:grab;user-select:none;touch-action:none;">
+      <img id="logoImg" src="" alt="" style="width:70px;display:block;border-radius:4px;"/>
+      <div class="logo-handle" id="logoResizeHandle"></div>
     </div>
+
+    <!-- Card counter -->
+    <div id="cardCounter"
+         style="display:none;position:absolute;top:12px;right:12px;z-index:20;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);color:white;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;pointer-events:none;font-family:'Space Grotesk',sans-serif;"></div>
+
+    <!-- Nav arrows -->
+    <button id="prevBtn" class="nav-overlay" style="left:8px;">
+      <span class="material-symbols-outlined" style="font-size:28px;">chevron_left</span>
+    </button>
+    <button id="nextBtn" class="nav-overlay" style="right:8px;">
+      <span class="material-symbols-outlined" style="font-size:28px;">chevron_right</span>
+    </button>
+
+    <!-- Download -->
+    <button id="downloadBtn"
+            style="position:absolute;bottom:14px;right:14px;z-index:20;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);box-shadow:0 4px 18px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform .15s;">
+      <span class="material-symbols-outlined" style="font-size:24px;color:var(--primary);">download</span>
+    </button>
   </div>
 
-  <!-- Ultra-Minimal Floating Picker -->
-  <div id="pickerOverlay" class="fixed inset-0 z-50 hidden flex items-end pointer-events-none bg-black/40">
-    <div class="w-full pointer-events-auto px-4 pb-12">
-      <div class="overflow-x-auto whitespace-nowrap scrollbar-hide py-4 px-6">
-        <div id="pickerContent" class="inline-flex gap-5"></div>
-      </div>
+  <!-- Dot indicators -->
+  <div id="dotRow" style="display:flex;gap:6px;margin-top:10px;min-height:10px;"></div>
+</main>
+
+<!-- ══════════ TOOLBAR ══════════ -->
+<div id="toolbar">
+  <div class="tb-inner">
+    <button class="tb-btn" data-action="aspect">
+      <span class="material-symbols-outlined">aspect_ratio</span>
+      <span class="tbl">Ratio</span>
+    </button>
+    <button class="tb-btn" data-action="header">
+      <span class="material-symbols-outlined">title</span>
+      <span class="tbl">Header</span>
+    </button>
+    <button class="tb-btn" data-action="content">
+      <span class="material-symbols-outlined">notes</span>
+      <span class="tbl">Content</span>
+    </button>
+    <button class="tb-btn" data-action="bg">
+      <span class="material-symbols-outlined">gradient</span>
+      <span class="tbl">BG</span>
+    </button>
+    <button class="tb-btn" data-action="border">
+      <span class="material-symbols-outlined">border_outer</span>
+      <span class="tbl">Border</span>
+    </button>
+    <button class="tb-btn" data-action="logo">
+      <span class="material-symbols-outlined">add_photo_alternate</span>
+      <span class="tbl">Logo</span>
+    </button>
+    <button class="tb-btn" data-action="addCard" style="color:var(--primary);">
+      <span class="material-symbols-outlined">add_card</span>
+      <span class="tbl">New</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ FLOATING PICKER (original style) ══════════ -->
+<!-- used for: BG, aspect ratio, border width -->
+<div id="floatPicker">
+  <div id="pickerInner">
+    <div id="pickerScroll" class="scrollbar-hide">
+      <div id="pickerItems"></div>
     </div>
   </div>
+</div>
 
-  <!-- Edit Sheet -->
-  <div id="editSheet" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end">
-    <div class="w-full bg-white rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto">
-      <div class="flex justify-between mb-6">
-        <h2 class="text-2xl font-bold"></h2>
-        <button id="closeEdit" class="w-10 h-10 rounded-full hover:bg-gray-100">Ok</button>
-      </div>
-      <input id="title" type="text" class="w-full px-4 py-3 rounded-xl bg-gray-100 mb-4 text-xl" placeholder="Title" />
-      <textarea id="content" rows="5" class="w-full px-4 py-3 rounded-xl bg-gray-100 mb-4" placeholder="Content"></textarea>
-      <input id="watermarkText" type="text" placeholder="Watermark (optional)" class="w-full px-4 py-3 rounded-xl bg-gray-100" />
-    </div>
+<!-- ══════════ HEADER MINI-SHEET ══════════ -->
+<div id="headerSheet" class="mini-sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-topbar">
+    <h3>✏️ Header</h3>
+    <button class="sheet-done" id="closeHeader">Done</button>
   </div>
+  <div class="sheet-body">
+    <div class="s-label">Text</div>
+    <input id="titleInput" type="text" class="s-input" placeholder="Header text…"/>
 
-  <script>
-    // Card Data
-    let cards = [{
-      title: "FlashCard Maker",
-      content: "Simply enter your Title and Content, choose your color, font, and background, then click Download—you’re done!",
-      watermark: "",
-      font: "elegant",
-      textColor: "#ffffff",
-      bg: "from-purple-600 to-pink-600",
-      aspect: "aspect-3-4",
-      borderWidth: "4",
-      borderColor: "transparent",
-      shadowIntensity: "none"
-    }];
-    let currentCardIndex = 0;
+    <div class="s-label">Font</div>
+    <div class="font-row" id="hFontRow"></div>
 
-    // Elements
-    const previewTitle = document.getElementById('previewTitle');
-    const previewContent = document.getElementById('previewContent');
-    const watermarkContainer = document.getElementById('watermark');
-    const watermarkSpan = watermarkContainer.querySelector('span');
-    const bgLayer = document.getElementById('bgLayer');
-    const cardPreview = document.getElementById('cardPreview');
+    <div class="s-label">Size</div>
+    <div class="sl-row">
+      <span class="material-symbols-outlined sl-ico">text_decrease</span>
+      <input type="range" id="hSize" min="14" max="72" value="36"/>
+      <span class="material-symbols-outlined sl-ico">text_increase</span>
+    </div>
 
-    const titleInput = document.getElementById('title');
-    const contentInput = document.getElementById('content');
-    const watermarkInput = document.getElementById('watermarkText');
+    <div class="s-label">Style</div>
+    <div class="btn-row">
+      <button class="s-btn on" id="hBold"><span class="material-symbols-outlined">format_bold</span><span>Bold</span></button>
+      <button class="s-btn" id="hItalic"><span class="material-symbols-outlined">format_italic</span><span>Italic</span></button>
+    </div>
 
-    const pickerOverlay = document.getElementById('pickerOverlay');
-    const pickerContent = document.getElementById('pickerContent');
+    <div class="s-label">Alignment</div>
+    <div class="btn-row">
+      <button class="s-btn" data-ah="left"><span class="material-symbols-outlined">format_align_left</span></button>
+      <button class="s-btn on" data-ah="center"><span class="material-symbols-outlined">format_align_center</span></button>
+      <button class="s-btn" data-ah="right"><span class="material-symbols-outlined">format_align_right</span></button>
+    </div>
 
-    const prevOverlay = document.getElementById('prevOverlay');
-    const nextOverlay = document.getElementById('nextOverlay');
-    const downloadBtn = document.getElementById('downloadBtn');
+    <div class="s-label">Color</div>
+    <div class="swatch-row" id="hColorRow"></div>
 
-    // Options (same as before)
-    const fonts = [
-      { class: "elegant", label: "PlayFair" },
-      { class: "serif", label: "MW" },
-      { class: "display", label: "Inter" },
-      { class: "mono", label: "Roboto" }
-    ];
+    <div class="s-label">Divider</div>
+    <label class="tog-row">
+      <input type="checkbox" id="divToggle"/>
+      <span>Show separator line below header</span>
+    </label>
+  </div>
+</div>
 
-    const textColors = [
-      "#ffffff", "#f0f0f0", "#d0d0d0", "#a0a0a0", "#1f2937",
-      "#ff0f44", "#ff6f00", "#ffd000", "#00ff85", "#00ffff",
-      "#0066ff", "#8a2be2", "#ff33cc", "#ec4899", "#f59e0b",
-      "#10b981", "#3b82f6", "#8b5cf6", "#84cc16", "#fb7185"
-    ];
+<!-- ══════════ CONTENT MINI-SHEET ══════════ -->
+<div id="contentSheet" class="mini-sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-topbar">
+    <h3>📝 Content</h3>
+    <button class="sheet-done" id="closeContent">Done</button>
+  </div>
+  <div class="sheet-body">
+    <div class="s-label">Text</div>
+    <textarea id="contentInput" class="s-input" rows="3" placeholder="Content text…"></textarea>
 
-    const backgroundOptions = [
-      { bg: "from-purple-600 to-pink-600", color: "#a855f7" },
-      { bg: "from-red-600 to-orange-600", color: "#f97316" },
-      { bg: "from-yellow-500 to-lime-500", color: "#eab308" },
-      { bg: "from-cyan-500 to-blue-600", color: "#06b6d4" },
-      { bg: "from-indigo-600 to-purple-700", color: "#6366f1" },
-      { bg: "from-teal-600 to-emerald-600", color: "#10b981" },
-      { bg: "from-gray-800 to-black", color: "#1f2937" },
-      { bg: "from-pink-500 to-rose-500", color: "#ec4899" },
-      { bg: "from-orange-500 to-red-500", color: "#f97316" },
-      { bg: "from-blue-500 to-teal-500", color: "#3b82f6" },
-      { bg: "from-green-500 to-emerald-600", color: "#10b981" },
-      { bg: "from-fuchsia-600 to-purple-600", color: "#c026d3" },
-      { bg: "from-amber-400 to-orange-600", color: "#f59e0b" },
-      { bg: "from-sky-400 to-indigo-600", color: "#0ea5e9" },
-      { bg: "from-violet-500 to-purple-600", color: "#8b5cf6" },
-      { bg: "from-lime-400 to-green-600", color: "#84cc16" },
-      { bg: "from-rose-400 to-pink-600", color: "#fb7185" },
-      { bg: "from-slate-600 to-gray-900", color: "#475569" }
-    ];
+    <div class="s-label">Font</div>
+    <div class="font-row" id="cFontRow"></div>
 
-    const borders = [
-      { width: "0", label: "None" },
-      { width: "4", label: "Thin" },
-      { width: "8", label: "Medium" },
-      { width: "16", label: "Thick" }
-    ];
+    <div class="s-label">Size</div>
+    <div class="sl-row">
+      <span class="material-symbols-outlined sl-ico">text_decrease</span>
+      <input type="range" id="cSize" min="9" max="38" value="15"/>
+      <span class="material-symbols-outlined sl-ico">text_increase</span>
+    </div>
 
-    const aspects = [
-      { class: "aspect-1-1", label: "1:1" },
-      { class: "aspect-3-4", label: "3:4" },
-      { class: "aspect-16-9", label: "16:9" },
-      { class: "aspect-9-16", label: "9:16" }
-    ];
+    <div class="s-label">Style</div>
+    <div class="btn-row">
+      <button class="s-btn" id="cBold"><span class="material-symbols-outlined">format_bold</span><span>Bold</span></button>
+      <button class="s-btn" id="cItalic"><span class="material-symbols-outlined">format_italic</span><span>Italic</span></button>
+    </div>
 
-    // Dynamic Font Sizing
-    function getTitleSize(aspect) {
-      if (aspect === "aspect-9-16") return "text-4xl";
-      if (aspect === "aspect-16-9") return "text-6xl";
-      return "text-5xl";
+    <div class="s-label">Alignment</div>
+    <div class="btn-row">
+      <button class="s-btn" data-ac="left"><span class="material-symbols-outlined">format_align_left</span></button>
+      <button class="s-btn on" data-ac="center"><span class="material-symbols-outlined">format_align_center</span></button>
+      <button class="s-btn" data-ac="right"><span class="material-symbols-outlined">format_align_right</span></button>
+    </div>
+
+    <div class="s-label">Vertical</div>
+    <div class="btn-row">
+      <button class="s-btn" data-va="top"><span class="material-symbols-outlined">vertical_align_top</span><span>Top</span></button>
+      <button class="s-btn on" data-va="center"><span class="material-symbols-outlined">vertical_align_center</span><span>Mid</span></button>
+      <button class="s-btn" data-va="bottom"><span class="material-symbols-outlined">vertical_align_bottom</span><span>Bot</span></button>
+    </div>
+
+    <div class="s-label">Color</div>
+    <div class="swatch-row" id="cColorRow"></div>
+
+    <div class="s-label">Watermark</div>
+    <input id="wmInput" type="text" class="s-input" placeholder="@yourbrand (optional)"/>
+  </div>
+</div>
+
+<!-- ══════════ LOGO MINI-SHEET ══════════ -->
+<div id="logoSheet" class="mini-sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-topbar">
+    <h3>🖼 Logo</h3>
+    <button class="sheet-done" id="closeLogo">Done</button>
+  </div>
+  <div class="sheet-body">
+    <div class="upload-area" id="uploadBox">
+      <span class="material-symbols-outlined" style="font-size:30px;color:#6b7280;display:block;margin-bottom:5px;">upload_file</span>
+      <p style="font-size:13px;font-weight:600;color:#6b7280;">Tap to upload logo</p>
+      <p style="font-size:11px;color:#9ca3af;margin-top:2px;">PNG · JPG · SVG · WebP</p>
+      <input type="file" id="logoFile" accept="image/*" style="display:none;"/>
+    </div>
+
+    <div class="s-label">Size</div>
+    <div class="sl-row">
+      <span class="material-symbols-outlined sl-ico">photo_size_select_small</span>
+      <input type="range" id="logoSize" min="20" max="200" value="70"/>
+      <span class="material-symbols-outlined sl-ico">photo_size_select_large</span>
+    </div>
+
+    <div class="s-label">Quick Position</div>
+    <div class="pos-grid">
+      <button class="pos-btn" data-p="tl"><span class="pdot" style="top:3px;left:3px;"></span></button>
+      <button class="pos-btn" data-p="tc"><span class="pdot" style="top:3px;left:50%;transform:translateX(-50%);"></span></button>
+      <button class="pos-btn" data-p="tr"><span class="pdot" style="top:3px;right:3px;"></span></button>
+      <button class="pos-btn" data-p="ml"><span class="pdot" style="top:50%;transform:translateY(-50%);left:3px;"></span></button>
+      <button class="pos-btn" data-p="mc"><span class="pdot" style="top:50%;left:50%;transform:translate(-50%,-50%);"></span></button>
+      <button class="pos-btn" data-p="mr"><span class="pdot" style="top:50%;transform:translateY(-50%);right:3px;"></span></button>
+      <button class="pos-btn" data-p="bl"><span class="pdot" style="bottom:3px;left:3px;"></span></button>
+      <button class="pos-btn" data-p="bc"><span class="pdot" style="bottom:3px;left:50%;transform:translateX(-50%);"></span></button>
+      <button class="pos-btn" data-p="br"><span class="pdot" style="bottom:3px;right:3px;"></span></button>
+    </div>
+    <p style="font-size:11px;color:#6b7280;text-align:center;margin-top:6px;">Or drag the logo anywhere on the card ↑</p>
+    <button class="rmv-btn" id="rmvLogo" style="display:none;">🗑 Remove Logo</button>
+  </div>
+</div>
+
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const mk = () => ({
+  title: "FlashCard Maker",
+  content: "Tap Header or Content to edit. Watch your changes live!",
+  watermark: "",
+  hFont:"elegant", hSize:36, hColor:"#ffffff",
+  hAlign:"center",  hBold:true, hItalic:false,
+  cFont:"display",  cSize:15,  cColor:"#ffffff",
+  cAlign:"center",  cBold:false, cItalic:false, cVA:"center",
+  bg:"vf", aspect:"aspect-3-4",
+  bw:"4", bc:"transparent",
+  div:false,
+  logo:null, lsz:70, lx:14, ly:14,
+});
+
+let cards = [mk()], idx = 0;
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const BG = {
+  vf:"linear-gradient(135deg,#7c3aed,#c026d3)",
+  bc:"linear-gradient(135deg,#2563eb,#06b6d4)",
+  ro:"linear-gradient(135deg,#f43f5e,#f97316)",
+  et:"linear-gradient(135deg,#10b981,#0d9488)",
+  ar:"linear-gradient(135deg,#fbbf24,#f43f5e)",
+  ip:"linear-gradient(135deg,#4f46e5,#7e22ce)",
+  si:"linear-gradient(135deg,#0ea5e9,#4f46e5)",
+  pr:"linear-gradient(135deg,#ec4899,#f43f5e)",
+  le:"linear-gradient(135deg,#84cc16,#059669)",
+  fp:"linear-gradient(135deg,#c026d3,#ec4899)",
+  oa:"linear-gradient(135deg,#f97316,#f59e0b)",
+  sd:"linear-gradient(135deg,#334155,#0f172a)",
+  gb:"linear-gradient(135deg,#1f2937,#000)",
+  tc:"linear-gradient(135deg,#2dd4bf,#0891b2)",
+  rr:"linear-gradient(135deg,#dc2626,#9f1239)",
+  yo:"linear-gradient(135deg,#facc15,#ea580c)",
+  bv:"linear-gradient(135deg,#3b82f6,#7c3aed)",
+  gl:"linear-gradient(135deg,#22c55e,#a3e635)",
+};
+// mid-colour for circle swatch
+const BG_MID = {
+  vf:"#9333ea", bc:"#3b82f6", ro:"#fb7185", et:"#10b981", ar:"#f59e0b",
+  ip:"#6366f1",  si:"#0ea5e9", pr:"#ec4899", le:"#84cc16", fp:"#c026d3",
+  oa:"#f97316",  sd:"#475569", gb:"#374151", tc:"#2dd4bf", rr:"#dc2626",
+  yo:"#facc15",  bv:"#3b82f6", gl:"#22c55e",
+};
+
+const FONTS = [
+  {k:"elegant", l:"Playfair", c:"'Playfair Display',serif"},
+  {k:"lora",    l:"Lora",     c:"'Lora',serif"},
+  {k:"dm",      l:"DM Serif", c:"'DM Serif Display',serif"},
+  {k:"display", l:"Inter",    c:"'Inter',sans-serif"},
+  {k:"grotesk", l:"Grotesk",  c:"'Space Grotesk',sans-serif"},
+  {k:"mono",    l:"Mono",     c:"'Roboto Mono',monospace"},
+  {k:"syne",    l:"Syne",     c:"'Syne',sans-serif"},
+];
+const gfc = k => (FONTS.find(f => f.k===k)||FONTS[0]).c;
+
+const TXT_C = ["#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd",
+               "#fbcfe8","#374151","#1f2937","#000000","#dc2626","#ea580c","#ca8a04",
+               "#16a34a","#2563eb","#7c3aed","#db2777","#0891b2","#0d9488"];
+const BDR_C = ["#ffffff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd","#000000",
+               "#1f2937","#dc2626","#ea580c","#ca8a04","#16a34a","#2563eb","#7c3aed",
+               "#db2777","#f97316","#10b981","#06b6d4","#8b5cf6","#374151"];
+
+// ─── ELEMENTS ────────────────────────────────────────────────────────────────
+
+const $ = id => document.getElementById(id);
+const CP = $('cardPreview'), BGL = $('bgLayer'),
+      PT = $('previewTitle'), PC = $('previewContent'),
+      PD = $('previewDivider'), CB = $('contentBlock'),
+      WM = $('watermarkEl'), LO = $('logoOverlay'), LI = $('logoImg'),
+      CC = $('cardCounter');
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function render() {
+  const c = cards[idx];
+  BGL.style.background = BG[c.bg] || BG.vf;
+
+  CP.classList.remove('aspect-1-1','aspect-3-4','aspect-4-3','aspect-16-9','aspect-9-16');
+  CP.classList.add(c.aspect);
+  CP.style.borderWidth = c.bw === '0' ? '0' : c.bw + 'px';
+  CP.style.borderStyle = 'solid';
+  CP.style.borderColor = c.bc;
+
+  PT.textContent        = c.title || '';
+  PT.style.fontFamily   = gfc(c.hFont);
+  PT.style.fontSize     = c.hSize + 'px';
+  PT.style.color        = c.hColor;
+  PT.style.textAlign    = c.hAlign;
+  PT.style.fontWeight   = c.hBold   ? '700' : '400';
+  PT.style.fontStyle    = c.hItalic ? 'italic' : 'normal';
+
+  PD.style.display = c.div ? 'block' : 'none';
+
+  PC.textContent        = c.content || '';
+  PC.style.fontFamily   = gfc(c.cFont);
+  PC.style.fontSize     = c.cSize + 'px';
+  PC.style.color        = c.cColor;
+  PC.style.textAlign    = c.cAlign;
+  PC.style.fontWeight   = c.cBold   ? '700' : '400';
+  PC.style.fontStyle    = c.cItalic ? 'italic' : 'normal';
+  CB.style.justifyContent = c.cVA === 'top' ? 'flex-start' : c.cVA === 'bottom' ? 'flex-end' : 'center';
+
+  WM.textContent   = c.watermark || '';
+  WM.style.display = c.watermark ? 'block' : 'none';
+
+  if (c.logo) {
+    LI.src = c.logo; LI.style.width = c.lsz + 'px';
+    LO.style.left = c.lx + 'px'; LO.style.top = c.ly + 'px';
+    LO.style.display = 'block';
+    $('rmvLogo').style.display = 'block';
+  } else {
+    LO.style.display = 'none';
+    $('rmvLogo').style.display = 'none';
+  }
+
+  const multi = cards.length > 1;
+  CP.classList.toggle('has-multiple', multi);
+  CC.style.display = multi ? 'block' : 'none';
+  if (multi) CC.textContent = `${idx+1} / ${cards.length}`;
+  $('prevBtn').disabled = idx === 0;
+  $('nextBtn').disabled = idx === cards.length - 1;
+  renderDots();
+}
+
+function renderDots() {
+  const d = $('dotRow'); d.innerHTML = '';
+  cards.forEach((_, i) => {
+    const el = document.createElement('div');
+    const a = i === idx;
+    el.style.cssText = `width:${a?'18px':'7px'};height:7px;border-radius:4px;background:${a?'var(--primary)':'#c7d2fe'};transition:all .22s;cursor:pointer;`;
+    el.onclick = () => { idx = i; render(); };
+    d.appendChild(el);
+  });
+}
+
+// ─── FLOATING PICKER — original bubble style ─────────────────────────────────
+
+let pickerClose = null;
+
+function showPicker(items, onClose) {
+  const fp = $('floatPicker'), pi = $('pickerItems');
+  pi.innerHTML = '';
+  items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'pcircle' + (item.selected ? ' sel' : '');
+    if (item.isLabel) {
+      btn.classList.add('label-style');
+      btn.textContent = item.label;
+      btn.style.fontFamily = item.fontFamily || 'inherit';
+    } else {
+      btn.style.background = item.color;
+      // ring for dark colours
+      btn.style.boxShadow = '0 2px 12px rgba(0,0,0,0.35)';
     }
+    btn.onclick = () => {
+      item.action();
+      hidePicker();
+      render();
+    };
+    pi.appendChild(btn);
+  });
+  fp.classList.add('show');
+  pickerClose = onClose || null;
+}
 
-    function getContentSize(aspect) {
-      if (aspect === "aspect-9-16") return "text-base";
-      if (aspect === "aspect-16-9") return "text-xl";
-      return "text-lg";
+function hidePicker() {
+  $('floatPicker').classList.remove('show');
+  if (pickerClose) { pickerClose(); pickerClose = null; }
+}
+
+$('floatPicker').addEventListener('click', e => {
+  if (e.target === $('floatPicker') || e.target === $('pickerInner')) hidePicker();
+});
+
+// ─── MINI-SHEETS ─────────────────────────────────────────────────────────────
+
+let openSheet = null;
+
+function showSheet(id) {
+  if (openSheet && openSheet !== id) {
+    $(openSheet).classList.remove('open');
+  }
+  $(id).classList.add('open');
+  openSheet = id;
+}
+function hideSheet(id) {
+  $(id).classList.remove('open');
+  if (openSheet === id) openSheet = null;
+}
+
+$('closeHeader').onclick  = () => hideSheet('headerSheet');
+$('closeContent').onclick = () => hideSheet('contentSheet');
+$('closeLogo').onclick    = () => hideSheet('logoSheet');
+
+// close sheet on grip tap
+['headerSheet','contentSheet','logoSheet'].forEach(id => {
+  $(id).querySelector('.sheet-grip').addEventListener('click', () => hideSheet(id));
+});
+
+// ─── TOOLBAR ACTIONS ─────────────────────────────────────────────────────────
+
+document.querySelectorAll('[data-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const a = btn.dataset.action;
+    const c = cards[idx];
+    hidePicker();
+
+    if (a === 'header') {
+      $('titleInput').value = c.title;
+      $('hSize').value = c.hSize;
+      $('hBold').classList.toggle('on', c.hBold);
+      $('hItalic').classList.toggle('on', c.hItalic);
+      $('divToggle').checked = c.div;
+      document.querySelectorAll('[data-ah]').forEach(b => b.classList.toggle('on', b.dataset.ah === c.hAlign));
+      buildFonts('hFontRow', () => c.hFont, k => { cards[idx].hFont = k; });
+      buildSwatches('hColorRow', TXT_C, () => c.hColor, col => { cards[idx].hColor = col; });
+      showSheet('headerSheet');
     }
-
-    // Update Preview
-    function updatePreview() {
-      const c = cards[currentCardIndex];
-      previewTitle.textContent = c.title || '';
-      previewContent.textContent = c.content || '';
-
-      previewTitle.className = `font-bold leading-tight font-${c.font} ${getTitleSize(c.aspect)}`;
-      previewContent.className = `mt-6 font-medium leading-relaxed font-${c.font} ${getContentSize(c.aspect)}`;
-
-      previewTitle.style.color = c.textColor;
-      previewContent.style.color = c.textColor;
-
-      const shadow = c.shadowIntensity === 'none' ? 'none' : 
-        `0 ${c.shadowIntensity === 'light' ? '4px 12px' : c.shadowIntensity === 'medium' ? '8px 24px' : '12px 40px'} rgba(0,0,0,0.8)`;
-      previewTitle.style.textShadow = shadow;
-      previewContent.style.textShadow = shadow;
-
-      if (c.watermark) {
-        watermarkSpan.textContent = c.watermark;
-        watermarkContainer.classList.remove('hidden');
-      } else {
-        watermarkContainer.classList.add('hidden');
-      }
-
-      bgLayer.className = `absolute inset-0 bg-gradient-to-br ${c.bg}`;
-
-      cardPreview.classList.remove('aspect-1-1', 'aspect-3-4', 'aspect-16-9', 'aspect-9-16');
-      cardPreview.classList.remove('border-0', 'border-4', 'border-8', 'border-16', 'border-solid');
-
-      cardPreview.classList.add(c.aspect);
-
-      if (c.borderWidth === '0') {
-        cardPreview.classList.add('border-0');
-      } else {
-        cardPreview.classList.add(`border-${c.borderWidth}`, 'border-solid');
-      }
-
-      cardPreview.style.borderColor = c.borderColor;
-
-      // Update UI state (arrows visibility)
-      updateUIState();
+    else if (a === 'content') {
+      $('contentInput').value = c.content;
+      $('cSize').value = c.cSize;
+      $('wmInput').value = c.watermark;
+      $('cBold').classList.toggle('on', c.cBold);
+      $('cItalic').classList.toggle('on', c.cItalic);
+      document.querySelectorAll('[data-ac]').forEach(b => b.classList.toggle('on', b.dataset.ac === c.cAlign));
+      document.querySelectorAll('[data-va]').forEach(b => b.classList.toggle('on', b.dataset.va === c.cVA));
+      buildFonts('cFontRow', () => c.cFont, k => { cards[idx].cFont = k; });
+      buildSwatches('cColorRow', TXT_C, () => c.cColor, col => { cards[idx].cColor = col; });
+      showSheet('contentSheet');
     }
-
-    // Update UI State (arrows show only with 2+ cards)
-    function updateUIState() {
-      const hasMultiple = cards.length > 1;
-      cardPreview.classList.toggle('has-multiple', hasMultiple);
-
-      if (hasMultiple) {
-        prevOverlay.disabled = currentCardIndex === 0;
-        nextOverlay.disabled = currentCardIndex === cards.length - 1;
-      }
+    else if (a === 'logo') {
+      $('logoSize').value = c.lsz;
+      showSheet('logoSheet');
     }
-
-    // Picker Button Creator
-    function createPickerButton(item, isSelected, callback) {
-      const btn = document.createElement('button');
-      btn.className = "w-14 h-14 rounded-full flex items-center justify-center relative shrink-0 transition-all hover:scale-115";
-
-      if (item.color) {
-        btn.style.backgroundColor = item.color;
-        btn.classList.add("shadow-lg", "ring-4", "ring-white/30");
-      } else {
-        btn.className += " bg-white/40 backdrop-blur-sm text-white text-xs font-semibold border border-white/40 shadow-md";
-        btn.textContent = item.label;
-      }
-
-      if (isSelected) {
-        const check = document.createElement('span');
-        check.textContent = "✓";
-        check.className = "absolute text-white text-xl font-bold drop-shadow-lg pointer-events-none";
-        btn.appendChild(check);
-      }
-
-      btn.onclick = () => {
-        callback(item);
-        pickerOverlay.classList.add('hidden');
-        updatePreview();
-      };
-      return btn;
+    else if (a === 'bg') {
+      // Original floating bubble picker for backgrounds
+      const items = Object.keys(BG).map(id => ({
+        color: BG_MID[id],
+        selected: id === c.bg,
+        action: () => { cards[idx].bg = id; },
+      }));
+      showPicker(items);
     }
-
-    // Open Picker
-    function openPicker(items, currentValue, getKey, callback, representativeColor = null) {
-      pickerContent.innerHTML = '';
-      items.forEach(item => {
-        const key = representativeColor ? getKey(item) : (item.color || getKey(item));
-        const isSelected = key === currentValue;
-        const btnItem = representativeColor ? { color: representativeColor(item) } : item;
-
-        const btn = createPickerButton(btnItem, isSelected, () => {
-          callback(item);
-          pickerOverlay.classList.add('hidden');
-          updatePreview();
-        });
-        pickerContent.appendChild(btn);
+    else if (a === 'border') {
+      // Border: first show width bubbles as label-circles
+      const widths = [
+        {w:'0',  l:'None'},
+        {w:'4',  l:'Thin'},
+        {w:'8',  l:'Med'},
+        {w:'14', l:'Thick'},
+      ];
+      const wItems = widths.map(({w, l}) => ({
+        isLabel: true, label: l,
+        selected: c.bw === w,
+        action: () => { cards[idx].bw = w; },
+      }));
+      // then colour swatches
+      const cItems = BDR_C.map(col => ({
+        color: col,
+        selected: c.bc === col,
+        action: () => { cards[idx].bc = col; },
+      }));
+      showPicker([...wItems, ...cItems]);
+    }
+    else if (a === 'aspect') {
+      const opts = [
+        {cls:'aspect-1-1',  l:'1:1'},
+        {cls:'aspect-3-4',  l:'3:4'},
+        {cls:'aspect-4-3',  l:'4:3'},
+        {cls:'aspect-16-9', l:'16:9'},
+        {cls:'aspect-9-16', l:'9:16'},
+      ];
+      const items = opts.map(o => ({
+        isLabel: true, label: o.l,
+        selected: c.aspect === o.cls,
+        action: () => { cards[idx].aspect = o.cls; },
+      }));
+      showPicker(items);
+    }
+    else if (a === 'addCard') {
+      const n = mk();
+      Object.assign(n, {
+        bg: c.bg, aspect: c.aspect,
+        hFont: c.hFont, hColor: c.hColor,
+        cFont: c.cFont, cColor: c.cColor,
+        bw: c.bw, bc: c.bc,
+        title: '', content: '',
       });
-      pickerOverlay.classList.remove('hidden');
+      cards.push(n);
+      idx = cards.length - 1;
+      render();
     }
-
-    // Close Picker on Outside Tap
-    pickerOverlay.addEventListener('click', (e) => {
-      if (e.target === pickerOverlay) pickerOverlay.classList.add('hidden');
-    });
-
-    // Action Buttons
-    document.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        const c = cards[currentCardIndex];
-
-        if (action === 'edit') {
-          titleInput.value = c.title;
-          contentInput.value = c.content;
-          watermarkInput.value = c.watermark || '';
-          document.getElementById('editSheet').classList.remove('hidden');
-        } 
-        else if (action === 'font') {
-          openPicker(fonts, c.font, i => i.class, f => c.font = f.class);
-        } 
-        else if (action === 'textColor') {
-          openPicker(textColors.map(col => ({color: col})), c.textColor, i => i.color, tc => c.textColor = tc.color);
-        } 
-        else if (action === 'bgColor') {
-          openPicker(backgroundOptions, c.bg, i => i.bg, b => c.bg = b.bg, i => i.color);
-        } 
-        else if (action === 'border') {
-          openPicker(borders, c.borderWidth, i => i.width, b => c.borderWidth = b.width);
-        } 
-        else if (action === 'aspect') {
-          openPicker(aspects, c.aspect, i => i.class, a => c.aspect = a.class);
-        } 
-        else if (action === 'addCard') {
-          cards.push({
-            title: "",
-            content: "",
-            watermark: "",
-            font: c.font,
-            textColor: c.textColor,
-            bg: c.bg,
-            aspect: c.aspect,
-            borderWidth: c.borderWidth,
-            borderColor: c.borderColor,
-            shadowIntensity: c.shadowIntensity
-          });
-          currentCardIndex = cards.length - 1;
-          updatePreview(); // This calls updateUIState()
-        }
-      });
-    });
-
-    // Close Edit Sheet
-    document.getElementById('closeEdit').addEventListener('click', () => {
-      document.getElementById('editSheet').classList.add('hidden');
-      updatePreview();
-    });
-
-    // Live Updates from Edit Sheet
-    titleInput.addEventListener('input', () => { cards[currentCardIndex].title = titleInput.value; updatePreview(); });
-    contentInput.addEventListener('input', () => { cards[currentCardIndex].content = contentInput.value; updatePreview(); });
-    watermarkInput.addEventListener('input', () => { cards[currentCardIndex].watermark = watermarkInput.value; updatePreview(); });
-
-
-downloadBtn.addEventListener('click', () => {
-  // 1. Hide unwanted elements
-  const originalPrevDisplay = prevOverlay.style.display;
-  const originalNextDisplay = nextOverlay.style.display;
-  const originalDownloadDisplay = downloadBtn.style.display;
-
-  prevOverlay.style.display = 'none';
-  nextOverlay.style.display = 'none';
-  downloadBtn.style.display = 'none';
-
-  // 2. Capture
-  html2canvas(cardPreview, { scale: 2 }).then(canvas => {
-    canvas.toBlob(blob => {
-      const link = document.createElement('a');
-      link.download = (cards[currentCardIndex].title || 'flashcard') + '.png';
-      link.href = URL.createObjectURL(blob);
-      link.click();
-
-      // 3. Restore visibility immediately after
-      prevOverlay.style.display = originalPrevDisplay;
-      nextOverlay.style.display = originalNextDisplay;
-      downloadBtn.style.display = originalDownloadDisplay;
-    });
   });
 });
 
-    // Overlay Navigation
-    prevOverlay.addEventListener('click', () => {
-      if (currentCardIndex > 0) {
-        currentCardIndex--;
-        updatePreview();
-      }
-    });
+// ─── BUILD UI HELPERS ────────────────────────────────────────────────────────
 
-    nextOverlay.addEventListener('click', () => {
-      if (currentCardIndex < cards.length - 1) {
-        currentCardIndex++;
-        updatePreview();
-      }
-    });
+function buildFonts(cid, getCur, onPick) {
+  const r = $(cid); r.innerHTML = '';
+  FONTS.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'fpill' + (f.k === getCur() ? ' on' : '');
+    b.textContent = f.l;
+    b.style.fontFamily = f.c;
+    b.onclick = () => {
+      onPick(f.k);
+      r.querySelectorAll('.fpill').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      render();
+    };
+    r.appendChild(b);
+  });
+}
 
-    // Download
-    downloadBtn.addEventListener('click', () => {
-      html2canvas(cardPreview, { scale: 2 }).then(canvas => {
-        canvas.toBlob(blob => {
-          const link = document.createElement('a');
-          link.download = (cards[currentCardIndex].title || 'flashcard') + '.png';
-          link.href = URL.createObjectURL(blob);
-          link.click();
-        });
-      });
-    });
+function buildSwatches(cid, pal, getCur, onPick) {
+  const r = $(cid); r.innerHTML = '';
+  pal.forEach(col => {
+    const s = document.createElement('button');
+    s.className = 'sw' + (col === getCur() ? ' on' : '');
+    s.style.background = col;
+    const light = ['#ffffff','#f8f4ff','#fde68a','#fbcfe8','#fca5a5','#6ee7b7','#93c5fd'];
+    if (light.includes(col)) s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.13)';
+    s.onclick = () => {
+      onPick(col);
+      r.querySelectorAll('.sw').forEach(x => x.classList.remove('on'));
+      s.classList.add('on');
+      render();
+    };
+    r.appendChild(s);
+  });
+}
 
-    // Initial Render
-    updatePreview();
-  </script>
+// ─── LIVE INPUTS ─────────────────────────────────────────────────────────────
+
+$('titleInput').oninput   = e => { cards[idx].title     = e.target.value; render(); };
+$('contentInput').oninput = e => { cards[idx].content   = e.target.value; render(); };
+$('wmInput').oninput      = e => { cards[idx].watermark = e.target.value; render(); };
+$('hSize').oninput        = e => { cards[idx].hSize = +e.target.value; render(); };
+$('cSize').oninput        = e => { cards[idx].cSize = +e.target.value; render(); };
+$('divToggle').onchange   = e => { cards[idx].div = e.target.checked; render(); };
+
+const tog = (id, key) => {
+  $(id).onclick = () => {
+    cards[idx][key] = !cards[idx][key];
+    $(id).classList.toggle('on', cards[idx][key]);
+    render();
+  };
+};
+tog('hBold','hBold'); tog('hItalic','hItalic');
+tog('cBold','cBold'); tog('cItalic','cItalic');
+
+document.querySelectorAll('[data-ah]').forEach(b => {
+  b.onclick = () => {
+    cards[idx].hAlign = b.dataset.ah;
+    document.querySelectorAll('[data-ah]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+});
+document.querySelectorAll('[data-ac]').forEach(b => {
+  b.onclick = () => {
+    cards[idx].cAlign = b.dataset.ac;
+    document.querySelectorAll('[data-ac]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+});
+document.querySelectorAll('[data-va]').forEach(b => {
+  b.onclick = () => {
+    cards[idx].cVA = b.dataset.va;
+    document.querySelectorAll('[data-va]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+});
+
+// ─── LOGO ────────────────────────────────────────────────────────────────────
+
+$('uploadBox').onclick = () => $('logoFile').click();
+$('logoFile').onchange = () => {
+  const f = $('logoFile').files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    Object.assign(cards[idx], { logo: e.target.result, lsz: 70, lx: 14, ly: 14 });
+    render(); hideSheet('logoSheet');
+  };
+  r.readAsDataURL(f);
+};
+$('logoSize').oninput = e => { cards[idx].lsz = +e.target.value; render(); };
+$('rmvLogo').onclick  = () => { cards[idx].logo = null; render(); };
+
+document.querySelectorAll('[data-p]').forEach(b => {
+  b.onclick = () => {
+    const c = cards[idx];
+    const W = CP.offsetWidth, H = CP.offsetHeight;
+    const lw = c.lsz;
+    const lh = LI.naturalHeight ? (lw / LI.naturalWidth) * LI.naturalHeight : lw;
+    const p = 12;
+    const POS = {
+      tl:{x:p,y:p}, tc:{x:(W-lw)/2,y:p}, tr:{x:W-lw-p,y:p},
+      ml:{x:p,y:(H-lh)/2}, mc:{x:(W-lw)/2,y:(H-lh)/2}, mr:{x:W-lw-p,y:(H-lh)/2},
+      bl:{x:p,y:H-lh-p}, bc:{x:(W-lw)/2,y:H-lh-p}, br:{x:W-lw-p,y:H-lh-p},
+    }[b.dataset.p];
+    if (POS) {
+      cards[idx].lx = Math.max(0, POS.x);
+      cards[idx].ly = Math.max(0, POS.y);
+      render();
+    }
+  };
+});
+
+// Logo drag
+(() => {
+  let drag=false, sx, sy, ox, oy;
+  const start = e => {
+    if (e.target.id === 'logoResizeHandle') return;
+    e.preventDefault(); drag = true;
+    const pt = e.touches ? e.touches[0] : e;
+    sx = pt.clientX; sy = pt.clientY;
+    ox = cards[idx].lx; oy = cards[idx].ly;
+  };
+  const move = e => {
+    if (!drag) return; e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
+    const rc = CP.getBoundingClientRect();
+    const scx = CP.offsetWidth / rc.width, scy = CP.offsetHeight / rc.height;
+    const lw = cards[idx].lsz;
+    const nx = Math.max(0, Math.min(ox + (pt.clientX-sx)*scx, CP.offsetWidth-lw));
+    const ny = Math.max(0, Math.min(oy + (pt.clientY-sy)*scy, CP.offsetHeight-20));
+    cards[idx].lx = nx; cards[idx].ly = ny;
+    LO.style.left = nx+'px'; LO.style.top = ny+'px';
+  };
+  const end = () => { drag = false; };
+  LO.addEventListener('mousedown',  start);
+  LO.addEventListener('touchstart', start, {passive:false});
+  document.addEventListener('mousemove',  move);
+  document.addEventListener('touchmove',  move, {passive:false});
+  document.addEventListener('mouseup',    end);
+  document.addEventListener('touchend',   end);
+})();
+
+// Logo resize
+(() => {
+  let r=false, sx, ss;
+  const h = $('logoResizeHandle');
+  h.addEventListener('mousedown', e => { e.stopPropagation(); r=true; sx=e.clientX; ss=cards[idx].lsz; });
+  document.addEventListener('mousemove', e => {
+    if (!r) return;
+    const ns = Math.max(18, Math.min(ss + (e.clientX-sx), 240));
+    cards[idx].lsz = ns; LI.style.width = ns+'px'; $('logoSize').value = ns;
+  });
+  document.addEventListener('mouseup', () => { r = false; });
+})();
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+
+$('prevBtn').onclick = () => { if (idx > 0) { idx--; render(); } };
+$('nextBtn').onclick = () => { if (idx < cards.length-1) { idx++; render(); } };
+
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowLeft'  && idx > 0)               { idx--; render(); }
+  if (e.key === 'ArrowRight' && idx < cards.length-1)  { idx++; render(); }
+  if (e.key === 'Escape') { hidePicker(); }
+});
+
+// ─── DOWNLOAD ────────────────────────────────────────────────────────────────
+
+$('downloadBtn').addEventListener('click', () => {
+  const hide = [$('downloadBtn'), $('prevBtn'), $('nextBtn'), CC];
+  hide.forEach(el => el.style.visibility = 'hidden');
+  html2canvas(CP, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false })
+    .then(canvas => {
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.download = (cards[idx].title || 'flashcard') + '.png';
+        a.href = URL.createObjectURL(blob);
+        a.click();
+        hide.forEach(el => el.style.visibility = '');
+      }, 'image/png');
+    });
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+render();
+</script>
 </body>
 </html>
