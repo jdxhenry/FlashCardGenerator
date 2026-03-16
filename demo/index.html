@@ -12,1310 +12,1133 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: { primary: "#6366f1" },
-          fontFamily: {
-            display: ["Inter","sans-serif"],
-            serif: ["Merriweather","serif"],
-            mono: ["Roboto Mono","monospace"],
-            elegant: ["Playfair Display","serif"],
-            grotesk: ["Space Grotesk","sans-serif"],
-            lora: ["Lora","serif"],
-            dm: ["DM Serif Display","serif"],
-            syne: ["Syne","sans-serif"],
-          },
-        },
-      },
-    }
-  </script>
-
   <style>
     :root {
       --primary: #6366f1;
-      --primary-light: #a5b4fc;
       --surface: #ffffff;
       --surface2: #f8f7ff;
       --border: #e5e3ff;
       --text: #1e1b4b;
       --muted: #6b7280;
+      --toolbar-h: 60px;
     }
 
-    * { box-sizing: border-box; }
-    body { min-height: 100dvh; background: #f0efff; font-family: 'Space Grotesk', sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* Aspect ratios */
+    body {
+      height: 100dvh;
+      overflow: hidden;
+      background: #eeeeff;
+      font-family: 'Space Grotesk', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Aspect ratios ── */
     .aspect-1-1  { aspect-ratio: 1/1; }
     .aspect-3-4  { aspect-ratio: 3/4; }
     .aspect-4-3  { aspect-ratio: 4/3; }
     .aspect-16-9 { aspect-ratio: 16/9; }
     .aspect-9-16 { aspect-ratio: 9/16; }
 
-    /* Scrollbar hide */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+    /* ══════════════════════════════════
+       PREVIEW AREA
+    ══════════════════════════════════ */
+    #previewArea {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px 6px;
+      overflow: hidden;
+      /* When sheet open, shrink to show card above sheet */
+      transition: padding-bottom 0.3s cubic-bezier(.4,0,.2,1),
+                  transform 0.3s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* The card itself */
+    #cardPreview {
+      position: relative;
+      width: 100%;
+      max-width: min(260px, calc(100vw - 32px));
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(99,102,241,0.24), 0 2px 8px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+    }
+
     /* Nav overlay arrows */
     .nav-overlay {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      padding: 10px;
-      border-radius: 9999px;
-      background: rgba(0,0,0,0.28);
-      backdrop-filter: blur(8px);
-      color: white;
-      opacity: 0;
-      transition: opacity 0.25s ease;
-      z-index: 20;
-      cursor: pointer;
-      border: none;
+      position: absolute; top: 50%; transform: translateY(-50%);
+      padding: 7px; border-radius: 9999px;
+      background: rgba(0,0,0,0.3); backdrop-filter: blur(6px);
+      color: white; opacity: 0; transition: opacity 0.2s;
+      z-index: 20; cursor: pointer; border: none;
     }
-    .has-multiple #cardPreview:hover .nav-overlay { opacity: 0.75; }
-    .has-multiple #cardPreview:hover .nav-overlay:hover { opacity: 1; }
-    .has-multiple .nav-overlay { display: flex !important; }
     .nav-overlay { display: none; }
+    .has-multiple .nav-overlay { display: flex !important; }
+    .has-multiple #cardPreview:hover .nav-overlay { opacity: 0.7; }
 
-    /* Toolbar button active */
-    .toolbar-btn.active { color: var(--primary) !important; }
-    .toolbar-btn.active .tb-icon { background: #ede9fe; border-radius: 8px; }
+    #dotIndicators { display: flex; gap: 5px; margin-top: 7px; min-height: 10px; }
 
-    /* Sheet / Modal */
-    .sheet {
-      position: fixed; inset: 0; z-index: 60;
-      background: rgba(15,10,40,0.55);
-      display: none;
-      align-items: flex-end;
+    /* Download btn */
+    #downloadBtn {
+      position: absolute; bottom: 10px; right: 10px; z-index: 25;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+      box-shadow: 0 3px 14px rgba(0,0,0,0.18);
+      display: flex; align-items: center; justify-content: center;
+      border: none; cursor: pointer; transition: transform 0.15s;
     }
-    .sheet.open { display: flex; }
-    .sheet-inner {
-      width: 100%;
-      background: var(--surface);
-      border-radius: 28px 28px 0 0;
-      padding: 24px 20px 36px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .sheet-handle {
-      width: 44px; height: 4px; border-radius: 9px;
-      background: #d1d5db; margin: 0 auto 20px;
+    #downloadBtn:hover { transform: scale(1.08); }
+    #downloadBtn:active { transform: scale(0.93); }
+
+    #cardCounter {
+      position: absolute; top: 8px; right: 8px; z-index: 25;
+      background: rgba(0,0,0,0.35); backdrop-filter: blur(6px);
+      color: white; font-size: 9px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px; pointer-events: none;
     }
 
-    /* Tab strip */
-    .tab-strip { display: flex; gap: 4px; background: #f3f0ff; border-radius: 14px; padding: 4px; margin-bottom: 20px; }
-    .tab-btn {
-      flex: 1; padding: 8px 10px; border-radius: 10px; border: none;
-      font-size: 13px; font-weight: 600; color: var(--muted);
-      background: transparent; cursor: pointer; transition: all 0.18s;
-      font-family: 'Space Grotesk', sans-serif;
-    }
-    .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 1px 6px rgba(99,102,241,0.15); }
-
-    /* Form elements */
-    .form-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; display: block; }
-    .form-input {
-      width: 100%; padding: 11px 14px; border-radius: 14px;
-      background: var(--surface2); border: 1.5px solid var(--border);
-      font-size: 15px; color: var(--text); outline: none;
-      font-family: 'Space Grotesk', sans-serif;
-      transition: border-color 0.18s;
-    }
-    .form-input:focus { border-color: var(--primary); }
-    textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.6; }
-
-    /* Section divider */
-    .section-divider {
-      display: flex; align-items: center; gap: 10px;
-      margin: 18px 0 14px; font-size: 12px; font-weight: 700;
-      color: var(--muted); text-transform: uppercase; letter-spacing: .07em;
-    }
-    .section-divider::before, .section-divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
+    #watermarkEl {
+      position: absolute; bottom: 10px; left: 10px; z-index: 12;
+      opacity: 0.55; font-weight: 700; color: white;
+      font-size: 11px; pointer-events: none;
     }
 
-    /* Icon button row */
-    .icon-row { display: flex; gap: 6px; }
-    .icon-btn {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 10px 6px; border-radius: 12px;
-      background: var(--surface2); border: 1.5px solid var(--border);
-      cursor: pointer; transition: all 0.18s; font-size: 11px; font-weight: 600;
-      color: var(--muted); gap: 4px;
-    }
-    .icon-btn .material-symbols-outlined { font-size: 20px; }
-    .icon-btn:hover { border-color: var(--primary); color: var(--primary); background: #f5f3ff; }
-    .icon-btn.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
-
-    /* Color swatch */
-    .color-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .swatch {
-      width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
-      border: 3px solid transparent; transition: transform 0.15s, box-shadow 0.15s;
-      position: relative;
-    }
-    .swatch:hover { transform: scale(1.15); }
-    .swatch.selected { border-color: var(--primary); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary); }
-    .swatch.selected::after {
-      content: '✓'; position: absolute; inset: 0; display: flex;
-      align-items: center; justify-content: center;
-      font-size: 14px; color: white; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,.5);
-    }
-
-    /* Font pill */
-    .font-pill {
-      padding: 8px 16px; border-radius: 30px; border: 1.5px solid var(--border);
-      font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface2);
-      color: var(--text); transition: all 0.18s; white-space: nowrap;
-    }
-    .font-pill.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
-
-    /* Size slider */
-    input[type=range] {
-      -webkit-appearance: none; width: 100%; height: 6px;
-      border-radius: 3px; background: var(--border); outline: none;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
-      background: var(--primary); cursor: pointer; box-shadow: 0 2px 8px rgba(99,102,241,.4);
-    }
-
-    /* Logo overlay drag */
     #logoOverlay {
       position: absolute; cursor: grab; user-select: none; z-index: 15;
       touch-action: none;
     }
     #logoOverlay:active { cursor: grabbing; }
-    #logoOverlay img { display: block; border-radius: 4px; }
-    #logoOverlay .logo-handle {
-      position: absolute; bottom: -6px; right: -6px;
-      width: 14px; height: 14px; background: white; border: 2px solid var(--primary);
-      border-radius: 3px; cursor: se-resize;
+    #logoOverlay img { display: block; border-radius: 3px; }
+    .logo-handle {
+      position: absolute; bottom: -5px; right: -5px;
+      width: 11px; height: 11px; background: white;
+      border: 2px solid var(--primary); border-radius: 2px; cursor: se-resize;
     }
 
-    /* Download btn */
-    #downloadBtn {
-      position: absolute; bottom: 14px; right: 14px; z-index: 25;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
-      display: flex; align-items: center; justify-content: center;
-      border: none; cursor: pointer; transition: transform 0.15s;
-    }
-    #downloadBtn:hover { transform: scale(1.08); }
-    #downloadBtn:active { transform: scale(0.94); }
-
-    /* Card counter */
-    #cardCounter {
-      position: absolute; top: 14px; right: 14px; z-index: 25;
-      background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);
-      color: white; font-size: 11px; font-weight: 700;
-      padding: 4px 10px; border-radius: 20px;
-      font-family: 'Space Grotesk', sans-serif;
-      pointer-events: none;
-    }
-
-    /* BG gradient pill */
-    .bg-pill {
-      width: 52px; height: 32px; border-radius: 10px; cursor: pointer;
-      border: 3px solid transparent; transition: transform 0.15s, box-shadow 0.15s;
-      position: relative; flex-shrink: 0;
-    }
-    .bg-pill:hover { transform: scale(1.1); }
-    .bg-pill.selected { border-color: var(--primary); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary); }
-
-    /* Alignment buttons */
-    .align-btn {
-      flex: 1; padding: 9px; border-radius: 10px; border: 1.5px solid var(--border);
-      background: var(--surface2); cursor: pointer; color: var(--muted);
-      display: flex; align-items: center; justify-content: center; transition: all 0.18s;
-    }
-    .align-btn .material-symbols-outlined { font-size: 20px; }
-    .align-btn:hover { border-color: var(--primary); color: var(--primary); }
-    .align-btn.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
-
-    /* Toolbar */
+    /* ══════════════════════════════════
+       TOOLBAR
+    ══════════════════════════════════ */
     #toolbar {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-      background: rgba(255,255,255,0.88); backdrop-filter: blur(20px) saturate(180%);
-      border-top: 1px solid rgba(99,102,241,0.12);
-      box-shadow: 0 -4px 30px rgba(99,102,241,0.08);
+      flex-shrink: 0;
+      height: var(--toolbar-h);
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(99,102,241,0.14);
+      box-shadow: 0 -2px 18px rgba(99,102,241,0.09);
+      display: flex; align-items: center;
+      position: relative; z-index: 50;
+    }
+    .toolbar-inner {
+      width: 100%; max-width: 520px; margin: 0 auto;
+      padding: 0 4px;
+      display: flex; justify-content: space-around;
     }
     .toolbar-btn {
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
       color: #64748b; background: none; border: none; cursor: pointer;
-      padding: 6px 8px; border-radius: 10px; transition: color 0.15s;
-      font-family: 'Space Grotesk', sans-serif;
+      padding: 5px 6px; border-radius: 9px; transition: color 0.15s;
+      font-family: 'Space Grotesk', sans-serif; flex: 1; min-width: 0;
     }
     .toolbar-btn:hover { color: var(--primary); }
-    .toolbar-btn .material-symbols-outlined { font-size: 24px; }
-    .toolbar-btn span.tb-label { font-size: 10px; font-weight: 700; letter-spacing: .02em; }
-
-    /* picker bar (bg / text color pickers) */
-    #pickerOverlay {
-      position: fixed; inset: 0; z-index: 55; display: none;
-      align-items: flex-end; background: rgba(15,10,40,0.5);
-    }
-    #pickerOverlay.open { display: flex; }
-    #pickerBar {
-      width: 100%; background: var(--surface); border-radius: 28px 28px 0 0;
-      padding: 18px 18px 38px;
+    .toolbar-btn .material-symbols-outlined { font-size: 21px; }
+    .toolbar-btn .tb-label {
+      font-size: 8.5px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
     }
 
-    /* Gradient bg options */
-    .grad-bg { transition: all 0.15s; }
-
-    /* Logo position presets */
-    .pos-btn {
-      width: 38px; height: 38px; border-radius: 8px;
-      border: 1.5px solid var(--border); background: var(--surface2);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 700; color: var(--muted); transition: all 0.15s;
-      position: relative;
-    }
-    .pos-btn:hover { border-color: var(--primary); color: var(--primary); }
-    .pos-btn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); position: absolute; }
-
-    /* Card watermark */
-    #watermarkEl {
-      position: absolute; bottom: 14px; left: 14px; z-index: 12;
-      opacity: 0.55; font-weight: 700; color: white;
+    /* ══════════════════════════════════
+       BOTTOM SHEETS — PARTIAL HEIGHT
+       Card stays visible above the sheet
+    ══════════════════════════════════ */
+    .sheet {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: var(--toolbar-h);
+      z-index: 45;
+      /* Default height — overridden per-sheet */
+      height: 52vh;
+      background: var(--surface);
+      border-radius: 22px 22px 0 0;
+      box-shadow: 0 -6px 40px rgba(99,102,241,0.18), 0 -1px 0 rgba(99,102,241,0.08);
+      transform: translateY(110%);
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+      overflow: hidden;
       pointer-events: none;
     }
+    .sheet.open {
+      transform: translateY(0);
+      pointer-events: all;
+    }
 
-    /* Smooth transitions for preview text */
-    #previewTitle, #previewContent { transition: color 0.2s, font-size 0.2s; }
+    /* Compact sheets */
+    #bgSheet    { height: 36vh; }
+    #aspectSheet{ height: 26vh; }
+    #borderSheet{ height: 44vh; }
+
+    .sheet-drag {
+      flex-shrink: 0; padding: 10px 0 4px;
+      display: flex; justify-content: center; cursor: grab;
+    }
+    .sheet-handle { width: 38px; height: 4px; border-radius: 9px; background: #d1d5db; }
+
+    .sheet-header {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 14px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-title { font-size: 14px; font-weight: 800; color: var(--text); }
+    .sheet-done {
+      padding: 5px 15px; border-radius: 20px;
+      background: var(--primary); color: white;
+      font-weight: 700; font-size: 12px; border: none; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .sheet-body {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 10px 14px 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sheet-body::-webkit-scrollbar { width: 3px; }
+    .sheet-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Section label ── */
+    .sec {
+      font-size: 9.5px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin: 10px 0 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Text input ── */
+    .finput {
+      width: 100%; padding: 8px 12px; border-radius: 11px;
+      background: var(--surface2); border: 1.5px solid var(--border);
+      font-size: 14px; color: var(--text); outline: none;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: border-color 0.18s;
+    }
+    .finput:focus { border-color: var(--primary); }
+    textarea.finput { resize: none; min-height: 66px; line-height: 1.5; }
+
+    /* ── Font pills ── */
+    .font-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .font-pill {
+      padding: 5px 12px; border-radius: 20px;
+      border: 1.5px solid var(--border); font-size: 12px; font-weight: 600;
+      cursor: pointer; background: var(--surface2); color: var(--text);
+      transition: all 0.14s; white-space: nowrap;
+    }
+    .font-pill.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+
+    /* ── Slider ── */
+    .sl-row { display: flex; align-items: center; gap: 8px; }
+    .sl-icon { font-size: 15px; color: var(--muted); flex-shrink: 0; }
+    input[type=range] {
+      -webkit-appearance: none; flex: 1; height: 5px;
+      border-radius: 3px; background: var(--border); outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%;
+      background: var(--primary); cursor: pointer;
+      box-shadow: 0 1px 5px rgba(99,102,241,.35);
+    }
+
+    /* ── Icon buttons ── */
+    .irow { display: flex; gap: 5px; }
+    .ibtn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 7px 4px; border-radius: 9px;
+      background: var(--surface2); border: 1.5px solid var(--border);
+      cursor: pointer; font-size: 9.5px; font-weight: 600;
+      color: var(--muted); gap: 3px; transition: all 0.14s;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .ibtn .material-symbols-outlined { font-size: 17px; }
+    .ibtn:hover  { border-color: var(--primary); color: var(--primary); background: #f5f3ff; }
+    .ibtn.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+
+    /* ── Align buttons ── */
+    .arow { display: flex; gap: 5px; }
+    .abtn {
+      flex: 1; padding: 7px; border-radius: 9px;
+      border: 1.5px solid var(--border); background: var(--surface2);
+      cursor: pointer; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.14s;
+    }
+    .abtn .material-symbols-outlined { font-size: 17px; }
+    .abtn:hover  { border-color: var(--primary); color: var(--primary); }
+    .abtn.active { border-color: var(--primary); background: #ede9fe; color: var(--primary); }
+
+    /* ── Color swatches ── */
+    .crow { display: flex; flex-wrap: wrap; gap: 6px; }
+    .swatch {
+      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+      border: 2.5px solid transparent; transition: transform 0.13s, box-shadow 0.13s;
+      position: relative; flex-shrink: 0;
+    }
+    .swatch:hover { transform: scale(1.2); }
+    .swatch.sel {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+    }
+    .swatch.sel::after {
+      content: '✓'; position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: white; font-weight: bold;
+      text-shadow: 0 1px 3px rgba(0,0,0,.55);
+    }
+
+    /* ── BG pills ── */
+    .bg-row { display: flex; gap: 7px; padding: 3px 2px; }
+    .bg-pill {
+      width: 46px; height: 28px; border-radius: 8px; flex-shrink: 0; cursor: pointer;
+      border: 2.5px solid transparent;
+      transition: transform 0.13s, box-shadow 0.13s;
+    }
+    .bg-pill:hover { transform: scale(1.1); }
+    .bg-pill.sel {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px white, 0 0 0 3.5px var(--primary);
+    }
+
+    /* ── Position grid ── */
+    .pos-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 5px;
+      background: var(--surface2); border-radius: 11px;
+      padding: 7px; border: 1.5px solid var(--border);
+    }
+    .pos-btn {
+      height: 32px; border-radius: 7px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      cursor: pointer; position: relative; transition: all 0.13s;
+    }
+    .pos-btn:hover { border-color: var(--primary); background: #ede9fe; }
+    .pos-btn .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--primary); position: absolute;
+    }
+
+    /* ── Toggle ── */
+    .trow {
+      display: flex; align-items: center; gap: 9px; cursor: pointer; padding: 5px 0;
+    }
+    .trow input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); }
+    .trow span { font-size: 13px; color: var(--text); }
+
+    /* ── Upload area ── */
+    #logoUploadArea {
+      border: 2px dashed var(--border); border-radius: 13px;
+      padding: 18px; text-align: center; cursor: pointer;
+      background: var(--surface2); transition: border-color 0.18s;
+    }
+    #logoUploadArea:hover { border-color: var(--primary); }
+
+    .remove-btn {
+      width: 100%; padding: 9px; border-radius: 11px;
+      border: 1.5px solid #fecaca; background: #fff5f5;
+      color: #ef4444; font-weight: 700; font-size: 12px;
+      cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+      margin-top: 8px;
+    }
+
+    /* When sheet open, compress preview upward */
+    body.sheet-sm  #previewArea { padding-bottom: calc(26vh + var(--toolbar-h) + 6px); }
+    body.sheet-md  #previewArea { padding-bottom: calc(36vh + var(--toolbar-h) + 6px); }
+    body.sheet-lg  #previewArea { padding-bottom: calc(44vh + var(--toolbar-h) + 6px); }
+    body.sheet-xl  #previewArea { padding-bottom: calc(52vh + var(--toolbar-h) + 6px); }
   </style>
 </head>
-
 <body>
 
-<!-- ═══ PREVIEW AREA ═══ -->
-<main class="flex-1 flex flex-col items-center justify-center p-6 pb-28 pt-10">
-  <div id="cardPreview" class="relative max-w-sm w-full rounded-3xl shadow-2xl overflow-hidden aspect-3-4 border-4 border-transparent"
-       style="border-color: transparent;">
-    <!-- Background layer -->
-    <div id="bgLayer" class="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600"></div>
-    <!-- Subtle overlay -->
-    <div class="absolute inset-0 bg-white/8 pointer-events-none"></div>
+<!-- ═══ PREVIEW ═══ -->
+<main id="previewArea">
+  <div id="cardPreview" class="aspect-3-4" style="border:4px solid transparent;">
+    <div id="bgLayer" style="position:absolute;inset:0;background:linear-gradient(135deg,#7c3aed,#c026d3);"></div>
+    <div style="position:absolute;inset:0;background:rgba(255,255,255,0.06);pointer-events:none;"></div>
 
-    <!-- Content -->
-    <div id="cardContent" class="relative z-10 flex flex-col h-full px-7 py-10">
-      <!-- Header -->
-      <div id="headerBlock" class="mb-2">
-        <h1 id="previewTitle" class="font-bold leading-tight font-elegant text-5xl text-white text-center">
+    <div id="cardContent" style="position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;padding:20px 18px;">
+      <div id="headerBlock">
+        <h1 id="previewTitle" style="font-family:'Playfair Display',serif;font-size:28px;color:#fff;font-weight:700;line-height:1.2;text-align:center;">
           FlashCard Maker
         </h1>
       </div>
-      <!-- Divider (optional) -->
-      <div id="previewDivider" class="hidden w-12 h-1 rounded-full bg-white/50 my-3 mx-auto"></div>
-      <!-- Content area — flexible to fill space -->
-      <div id="contentBlock" class="flex-1 flex items-center">
-        <p id="previewContent" class="font-medium leading-relaxed font-display text-white text-center text-base w-full">
-          Simply enter your Title and Content, choose your color, font, and background, then click Download—you're done!
+      <div id="previewDivider" style="display:none;width:36px;height:3px;border-radius:9px;background:rgba(255,255,255,0.5);margin:7px auto;"></div>
+      <div id="contentBlock" style="flex:1;display:flex;justify-content:center;">
+        <p id="previewContent" style="font-family:'Inter',sans-serif;font-size:12px;color:#fff;text-align:center;line-height:1.6;width:100%;align-self:center;">
+          Tap Header or Content in the toolbar. See your changes live above!
         </p>
       </div>
     </div>
 
-    <!-- Watermark -->
-    <div id="watermarkEl" class="hidden"></div>
+    <div id="watermarkEl" style="position:absolute;bottom:9px;left:9px;z-index:12;opacity:0.55;font-weight:700;color:white;font-size:10px;pointer-events:none;display:none;"></div>
 
-    <!-- Logo overlay (draggable) -->
-    <div id="logoOverlay" class="hidden">
-      <img id="logoImg" src="" alt="logo" style="width:80px;" />
+    <div id="logoOverlay" style="display:none;position:absolute;z-index:15;cursor:grab;user-select:none;touch-action:none;">
+      <img id="logoImg" src="" alt="" style="width:60px;display:block;border-radius:3px;" />
       <div class="logo-handle" id="logoResizeHandle"></div>
     </div>
 
-    <!-- Card counter -->
-    <div id="cardCounter" class="hidden">1 / 1</div>
+    <div id="cardCounter" style="display:none;position:absolute;top:7px;right:7px;z-index:25;background:rgba(0,0,0,0.35);backdrop-filter:blur(6px);color:white;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;pointer-events:none;font-family:'Space Grotesk',sans-serif;"></div>
 
-    <!-- Nav arrows -->
-    <button id="prevOverlay" class="nav-overlay" style="left:10px;">
-      <span class="material-symbols-outlined" style="font-size:32px;">chevron_left</span>
+    <button id="prevOverlay" class="nav-overlay" style="left:7px;">
+      <span class="material-symbols-outlined" style="font-size:24px;">chevron_left</span>
     </button>
-    <button id="nextOverlay" class="nav-overlay" style="right:10px;">
-      <span class="material-symbols-outlined" style="font-size:32px;">chevron_right</span>
+    <button id="nextOverlay" class="nav-overlay" style="right:7px;">
+      <span class="material-symbols-outlined" style="font-size:24px;">chevron_right</span>
     </button>
 
-    <!-- Download button -->
     <button id="downloadBtn" title="Download">
-      <span class="material-symbols-outlined" style="font-size:26px;color:var(--primary);">download</span>
+      <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary);">download</span>
     </button>
   </div>
-
-  <!-- Page indicators -->
-  <div id="dotIndicators" class="flex gap-2 mt-4 hidden">
-  </div>
+  <div id="dotIndicators"></div>
 </main>
 
 <!-- ═══ TOOLBAR ═══ -->
 <div id="toolbar">
-  <div class="max-w-lg mx-auto px-2 py-2 flex justify-between items-center">
-
+  <div class="toolbar-inner">
     <button class="toolbar-btn" data-action="aspect">
       <span class="material-symbols-outlined">aspect_ratio</span>
       <span class="tb-label">Ratio</span>
     </button>
-
     <button class="toolbar-btn" data-action="editHeader">
       <span class="material-symbols-outlined">title</span>
       <span class="tb-label">Header</span>
     </button>
-
     <button class="toolbar-btn" data-action="editContent">
       <span class="material-symbols-outlined">notes</span>
       <span class="tb-label">Content</span>
     </button>
-
     <button class="toolbar-btn" data-action="bgColor">
       <span class="material-symbols-outlined">gradient</span>
       <span class="tb-label">BG</span>
     </button>
-
     <button class="toolbar-btn" data-action="border">
       <span class="material-symbols-outlined">border_outer</span>
       <span class="tb-label">Border</span>
     </button>
-
     <button class="toolbar-btn" data-action="logo">
       <span class="material-symbols-outlined">add_photo_alternate</span>
       <span class="tb-label">Logo</span>
     </button>
-
     <button class="toolbar-btn" data-action="addCard">
       <span class="material-symbols-outlined" style="color:var(--primary)">add_card</span>
       <span class="tb-label" style="color:var(--primary)">New</span>
     </button>
-
   </div>
 </div>
 
 
-<!-- ═══ HEADER EDIT SHEET ═══ -->
+<!-- ═══ HEADER SHEET ═══ -->
 <div id="headerSheet" class="sheet">
-  <div class="sheet-inner">
-    <div class="sheet-handle"></div>
-    <div class="flex justify-between items-center mb-4">
-      <h2 style="font-size:20px;font-weight:800;color:var(--text)">Header</h2>
-      <button id="closeHeader" style="padding:8px 18px;border-radius:20px;background:var(--primary);color:white;font-weight:700;font-size:14px;border:none;cursor:pointer;">Done</button>
+  <div class="sheet-drag"><div class="sheet-handle"></div></div>
+  <div class="sheet-header">
+    <span class="sheet-title">✏️ Header</span>
+    <button class="sheet-done" id="closeHeader">Done</button>
+  </div>
+  <div class="sheet-body">
+    <input id="titleInput" type="text" class="finput" placeholder="Header text…" />
+
+    <div class="sec">Font</div>
+    <div class="font-row" id="headerFontRow"></div>
+
+    <div class="sec">Size & Style</div>
+    <div class="sl-row" style="margin-bottom:7px;">
+      <span class="material-symbols-outlined sl-icon">text_decrease</span>
+      <input type="range" id="headerSizeSlider" min="14" max="80" value="28" />
+      <span class="material-symbols-outlined sl-icon">text_increase</span>
     </div>
-
-    <!-- Text input -->
-    <label class="form-label">Header Text</label>
-    <input id="titleInput" type="text" class="form-input" placeholder="Your flashcard title…" />
-
-    <div class="section-divider">Font</div>
-    <div class="flex flex-wrap gap-2 mb-4" id="headerFontRow"></div>
-
-    <div class="section-divider">Size</div>
-    <div class="flex items-center gap-3 mb-4">
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">text_decrease</span>
-      <input type="range" id="headerSizeSlider" min="16" max="80" value="44" class="flex-1" />
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">text_increase</span>
-    </div>
-
-    <div class="section-divider">Style</div>
-    <div class="icon-row mb-4">
-      <button class="icon-btn" id="headerBoldBtn" title="Bold">
-        <span class="material-symbols-outlined">format_bold</span>
-        <span>Bold</span>
+    <div class="irow" style="margin-bottom:3px;">
+      <button class="ibtn active" id="headerBoldBtn">
+        <span class="material-symbols-outlined">format_bold</span><span>Bold</span>
       </button>
-      <button class="icon-btn" id="headerItalicBtn" title="Italic">
-        <span class="material-symbols-outlined">format_italic</span>
-        <span>Italic</span>
+      <button class="ibtn" id="headerItalicBtn">
+        <span class="material-symbols-outlined">format_italic</span><span>Italic</span>
       </button>
     </div>
 
-    <div class="section-divider">Alignment</div>
-    <div class="flex gap-3 mb-4">
-      <button class="align-btn" data-align-header="left"><span class="material-symbols-outlined">format_align_left</span></button>
-      <button class="align-btn active" data-align-header="center"><span class="material-symbols-outlined">format_align_center</span></button>
-      <button class="align-btn" data-align-header="right"><span class="material-symbols-outlined">format_align_right</span></button>
+    <div class="sec">Alignment</div>
+    <div class="arow" style="margin-bottom:3px;">
+      <button class="abtn" data-align-header="left"><span class="material-symbols-outlined">format_align_left</span></button>
+      <button class="abtn active" data-align-header="center"><span class="material-symbols-outlined">format_align_center</span></button>
+      <button class="abtn" data-align-header="right"><span class="material-symbols-outlined">format_align_right</span></button>
     </div>
 
-    <div class="section-divider">Color</div>
-    <div class="color-row mb-4" id="headerColorRow"></div>
+    <div class="sec">Color</div>
+    <div class="crow" id="headerColorRow"></div>
 
-    <div class="section-divider">Show Divider Line</div>
-    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:4px;">
-      <input type="checkbox" id="dividerToggle" style="width:18px;height:18px;accent-color:var(--primary);" />
-      <span style="font-size:14px;color:var(--text);">Show separator line between header and content</span>
+    <div class="sec">Separator</div>
+    <label class="trow">
+      <input type="checkbox" id="dividerToggle" />
+      <span>Show divider line below header</span>
     </label>
   </div>
 </div>
 
 
-<!-- ═══ CONTENT EDIT SHEET ═══ -->
+<!-- ═══ CONTENT SHEET ═══ -->
 <div id="contentSheet" class="sheet">
-  <div class="sheet-inner">
-    <div class="sheet-handle"></div>
-    <div class="flex justify-between items-center mb-4">
-      <h2 style="font-size:20px;font-weight:800;color:var(--text)">Content</h2>
-      <button id="closeContent" style="padding:8px 18px;border-radius:20px;background:var(--primary);color:white;font-weight:700;font-size:14px;border:none;cursor:pointer;">Done</button>
+  <div class="sheet-drag"><div class="sheet-handle"></div></div>
+  <div class="sheet-header">
+    <span class="sheet-title">📝 Content</span>
+    <button class="sheet-done" id="closeContent">Done</button>
+  </div>
+  <div class="sheet-body">
+    <textarea id="contentInput" class="finput" rows="3" placeholder="Content text…"></textarea>
+
+    <div class="sec">Font</div>
+    <div class="font-row" id="contentFontRow"></div>
+
+    <div class="sec">Size & Style</div>
+    <div class="sl-row" style="margin-bottom:7px;">
+      <span class="material-symbols-outlined sl-icon">text_decrease</span>
+      <input type="range" id="contentSizeSlider" min="9" max="40" value="12" />
+      <span class="material-symbols-outlined sl-icon">text_increase</span>
     </div>
-
-    <label class="form-label">Content Text</label>
-    <textarea id="contentInput" class="form-input" rows="5" placeholder="Your flashcard content…"></textarea>
-
-    <div class="section-divider">Font</div>
-    <div class="flex flex-wrap gap-2 mb-4" id="contentFontRow"></div>
-
-    <div class="section-divider">Size</div>
-    <div class="flex items-center gap-3 mb-4">
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">text_decrease</span>
-      <input type="range" id="contentSizeSlider" min="10" max="48" value="16" class="flex-1" />
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">text_increase</span>
-    </div>
-
-    <div class="section-divider">Style</div>
-    <div class="icon-row mb-4">
-      <button class="icon-btn" id="contentBoldBtn" title="Bold">
-        <span class="material-symbols-outlined">format_bold</span>
-        <span>Bold</span>
+    <div class="irow" style="margin-bottom:3px;">
+      <button class="ibtn" id="contentBoldBtn">
+        <span class="material-symbols-outlined">format_bold</span><span>Bold</span>
       </button>
-      <button class="icon-btn" id="contentItalicBtn" title="Italic">
-        <span class="material-symbols-outlined">format_italic</span>
-        <span>Italic</span>
+      <button class="ibtn" id="contentItalicBtn">
+        <span class="material-symbols-outlined">format_italic</span><span>Italic</span>
       </button>
     </div>
 
-    <div class="section-divider">Alignment</div>
-    <div class="flex gap-3 mb-4">
-      <button class="align-btn" data-align-content="left"><span class="material-symbols-outlined">format_align_left</span></button>
-      <button class="align-btn active" data-align-content="center"><span class="material-symbols-outlined">format_align_center</span></button>
-      <button class="align-btn" data-align-content="right"><span class="material-symbols-outlined">format_align_right</span></button>
+    <div class="sec">Alignment</div>
+    <div class="arow" style="margin-bottom:3px;">
+      <button class="abtn" data-align-content="left"><span class="material-symbols-outlined">format_align_left</span></button>
+      <button class="abtn active" data-align-content="center"><span class="material-symbols-outlined">format_align_center</span></button>
+      <button class="abtn" data-align-content="right"><span class="material-symbols-outlined">format_align_right</span></button>
     </div>
 
-    <div class="section-divider">Vertical Position</div>
-    <div class="icon-row mb-4">
-      <button class="icon-btn" data-valign="top"><span class="material-symbols-outlined">vertical_align_top</span><span>Top</span></button>
-      <button class="icon-btn active" data-valign="center"><span class="material-symbols-outlined">vertical_align_center</span><span>Center</span></button>
-      <button class="icon-btn" data-valign="bottom"><span class="material-symbols-outlined">vertical_align_bottom</span><span>Bottom</span></button>
+    <div class="sec">Vertical Position</div>
+    <div class="irow" style="margin-bottom:3px;">
+      <button class="ibtn" data-valign="top"><span class="material-symbols-outlined">vertical_align_top</span><span>Top</span></button>
+      <button class="ibtn active" data-valign="center"><span class="material-symbols-outlined">vertical_align_center</span><span>Center</span></button>
+      <button class="ibtn" data-valign="bottom"><span class="material-symbols-outlined">vertical_align_bottom</span><span>Bottom</span></button>
     </div>
 
-    <div class="section-divider">Color</div>
-    <div class="color-row mb-4" id="contentColorRow"></div>
+    <div class="sec">Color</div>
+    <div class="crow" id="contentColorRow"></div>
 
-    <div class="section-divider">Watermark</div>
-    <input id="watermarkInput" type="text" class="form-input" placeholder="e.g. @yourbrand (optional)" />
+    <div class="sec">Watermark</div>
+    <input id="watermarkInput" type="text" class="finput" placeholder="@yourbrand (optional)" />
   </div>
 </div>
 
 
-<!-- ═══ LOGO SHEET ═══ -->
-<div id="logoSheet" class="sheet">
-  <div class="sheet-inner">
-    <div class="sheet-handle"></div>
-    <div class="flex justify-between items-center mb-4">
-      <h2 style="font-size:20px;font-weight:800;color:var(--text)">Logo / Image</h2>
-      <button id="closeLogo" style="padding:8px 18px;border-radius:20px;background:var(--primary);color:white;font-weight:700;font-size:14px;border:none;cursor:pointer;">Done</button>
-    </div>
-
-    <!-- Upload area -->
-    <div id="logoUploadArea" style="border:2px dashed var(--border);border-radius:16px;padding:28px;text-align:center;cursor:pointer;background:var(--surface2);margin-bottom:16px;transition:border-color 0.18s;">
-      <span class="material-symbols-outlined" style="font-size:40px;color:var(--muted);display:block;margin-bottom:8px;">upload_file</span>
-      <p style="font-size:14px;font-weight:600;color:var(--muted);">Tap to upload logo or image</p>
-      <p style="font-size:12px;color:#9ca3af;margin-top:4px;">PNG, JPG, SVG, WebP</p>
-      <input type="file" id="logoFileInput" accept="image/*" style="display:none;" />
-    </div>
-
-    <!-- Logo size -->
-    <label class="form-label">Logo Size</label>
-    <div class="flex items-center gap-3 mb-4">
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">photo_size_select_small</span>
-      <input type="range" id="logoSizeSlider" min="30" max="250" value="80" class="flex-1" />
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">photo_size_select_large</span>
-    </div>
-
-    <!-- Position presets -->
-    <label class="form-label">Quick Position</label>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px;background:var(--surface2);border-radius:14px;padding:10px;border:1.5px solid var(--border);">
-      <button class="pos-btn" data-pos="top-left" title="Top Left"><span class="dot" style="top:4px;left:4px;"></span></button>
-      <button class="pos-btn" data-pos="top-center" title="Top Center"><span class="dot" style="top:4px;left:50%;transform:translateX(-50%);"></span></button>
-      <button class="pos-btn" data-pos="top-right" title="Top Right"><span class="dot" style="top:4px;right:4px;"></span></button>
-      <button class="pos-btn" data-pos="mid-left" title="Mid Left"><span class="dot" style="top:50%;transform:translateY(-50%);left:4px;"></span></button>
-      <button class="pos-btn" data-pos="mid-center" title="Center"><span class="dot" style="top:50%;left:50%;transform:translate(-50%,-50%);"></span></button>
-      <button class="pos-btn" data-pos="mid-right" title="Mid Right"><span class="dot" style="top:50%;transform:translateY(-50%);right:4px;"></span></button>
-      <button class="pos-btn" data-pos="bot-left" title="Bottom Left"><span class="dot" style="bottom:4px;left:4px;"></span></button>
-      <button class="pos-btn" data-pos="bot-center" title="Bottom Center"><span class="dot" style="bottom:4px;left:50%;transform:translateX(-50%);"></span></button>
-      <button class="pos-btn" data-pos="bot-right" title="Bottom Right"><span class="dot" style="bottom:4px;right:4px;"></span></button>
-    </div>
-    <p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;">Or drag the logo directly on the card</p>
-
-    <!-- Remove logo -->
-    <button id="removeLogoBtn" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid #fecaca;background:#fff5f5;color:#ef4444;font-weight:700;font-size:14px;cursor:pointer;display:none;font-family:'Space Grotesk',sans-serif;">
-      🗑 Remove Logo
-    </button>
+<!-- ═══ BG SHEET ═══ -->
+<div id="bgSheet" class="sheet">
+  <div class="sheet-drag"><div class="sheet-handle"></div></div>
+  <div class="sheet-header">
+    <span class="sheet-title">🎨 Background</span>
+    <button class="sheet-done" id="closeBg">Done</button>
   </div>
-</div>
-
-
-<!-- ═══ ASPECT RATIO SHEET ═══ -->
-<div id="aspectSheet" class="sheet">
-  <div class="sheet-inner" style="padding-bottom:44px;">
-    <div class="sheet-handle"></div>
-    <h2 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px;">Aspect Ratio</h2>
-    <div class="icon-row flex-wrap" id="aspectRow"></div>
+  <div class="sheet-body">
+    <div style="overflow-x:auto;" class="scrollbar-hide">
+      <div id="bgPickerRow" class="bg-row" style="width:max-content;"></div>
+    </div>
   </div>
 </div>
 
 
 <!-- ═══ BORDER SHEET ═══ -->
 <div id="borderSheet" class="sheet">
-  <div class="sheet-inner" style="padding-bottom:44px;">
-    <div class="sheet-handle"></div>
-    <h2 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px;">Border</h2>
-
-    <label class="form-label">Width</label>
-    <div class="icon-row mb-4" id="borderWidthRow"></div>
-
-    <label class="form-label">Color</label>
-    <div class="color-row" id="borderColorRow"></div>
+  <div class="sheet-drag"><div class="sheet-handle"></div></div>
+  <div class="sheet-header">
+    <span class="sheet-title">⬜ Border</span>
+    <button class="sheet-done" id="closeBorder">Done</button>
+  </div>
+  <div class="sheet-body">
+    <div class="sec" style="margin-top:0;">Width</div>
+    <div class="irow" id="borderWidthRow"></div>
+    <div class="sec">Color</div>
+    <div class="crow" id="borderColorRow"></div>
   </div>
 </div>
 
 
-<!-- ═══ BG COLOR PICKER ═══ -->
-<div id="pickerOverlay">
-  <div id="pickerBar">
-    <div class="sheet-handle"></div>
-    <h3 style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:14px;">Background</h3>
-    <div class="overflow-x-auto scrollbar-hide pb-2">
-      <div id="bgPickerRow" class="flex gap-3" style="width:max-content;padding:4px 2px;"></div>
+<!-- ═══ ASPECT SHEET ═══ -->
+<div id="aspectSheet" class="sheet">
+  <div class="sheet-drag"><div class="sheet-handle"></div></div>
+  <div class="sheet-header">
+    <span class="sheet-title">⬛ Aspect Ratio</span>
+    <button class="sheet-done" id="closeAspect">Done</button>
+  </div>
+  <div class="sheet-body">
+    <div class="irow" id="aspectRow" style="flex-wrap:wrap;"></div>
+  </div>
+</div>
+
+
+<!-- ═══ LOGO SHEET ═══ -->
+<div id="logoSheet" class="sheet">
+  <div class="sheet-drag"><div class="sheet-handle"></div></div>
+  <div class="sheet-header">
+    <span class="sheet-title">🖼 Logo</span>
+    <button class="sheet-done" id="closeLogo">Done</button>
+  </div>
+  <div class="sheet-body">
+    <div id="logoUploadArea">
+      <span class="material-symbols-outlined" style="font-size:28px;color:var(--muted);display:block;margin-bottom:4px;">upload_file</span>
+      <p style="font-size:12px;font-weight:600;color:var(--muted);">Tap to upload logo</p>
+      <p style="font-size:10px;color:#9ca3af;margin-top:2px;">PNG · JPG · SVG · WebP</p>
+      <input type="file" id="logoFileInput" accept="image/*" style="display:none;" />
     </div>
+
+    <div class="sec">Size</div>
+    <div class="sl-row">
+      <span class="material-symbols-outlined sl-icon">photo_size_select_small</span>
+      <input type="range" id="logoSizeSlider" min="24" max="200" value="60" />
+      <span class="material-symbols-outlined sl-icon">photo_size_select_large</span>
+    </div>
+
+    <div class="sec">Quick Position</div>
+    <div class="pos-grid">
+      <button class="pos-btn" data-pos="top-left"><span class="dot" style="top:3px;left:3px;"></span></button>
+      <button class="pos-btn" data-pos="top-center"><span class="dot" style="top:3px;left:50%;transform:translateX(-50%);"></span></button>
+      <button class="pos-btn" data-pos="top-right"><span class="dot" style="top:3px;right:3px;"></span></button>
+      <button class="pos-btn" data-pos="mid-left"><span class="dot" style="top:50%;transform:translateY(-50%);left:3px;"></span></button>
+      <button class="pos-btn" data-pos="mid-center"><span class="dot" style="top:50%;left:50%;transform:translate(-50%,-50%);"></span></button>
+      <button class="pos-btn" data-pos="mid-right"><span class="dot" style="top:50%;transform:translateY(-50%);right:3px;"></span></button>
+      <button class="pos-btn" data-pos="bot-left"><span class="dot" style="bottom:3px;left:3px;"></span></button>
+      <button class="pos-btn" data-pos="bot-center"><span class="dot" style="bottom:3px;left:50%;transform:translateX(-50%);"></span></button>
+      <button class="pos-btn" data-pos="bot-right"><span class="dot" style="bottom:3px;right:3px;"></span></button>
+    </div>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin:7px 0 4px;">Or drag the logo directly on the card ↑</p>
+    <button id="removeLogoBtn" class="remove-btn" style="display:none;">🗑 Remove Logo</button>
   </div>
 </div>
 
 
-<!-- ═══ JAVASCRIPT ═══ -->
 <script>
-
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
 const defaultCard = () => ({
   title: "FlashCard Maker",
-  content: "Enter your content here. Customize fonts, colors, and more!",
+  content: "Tap Header or Content to edit. Changes appear live above!",
   watermark: "",
-
-  // Header
-  headerFont: "elegant",
-  headerSize: 44,
-  headerColor: "#ffffff",
-  headerAlign: "center",
-  headerBold: true,
-  headerItalic: false,
-
-  // Content
-  contentFont: "display",
-  contentSize: 16,
-  contentColor: "#ffffff",
-  contentAlign: "center",
-  contentBold: false,
-  contentItalic: false,
-  contentVAlign: "center",  // top | center | bottom
-
-  // Card style
-  bg: "from-violet-600 to-fuchsia-600",
+  headerFont: "elegant",  headerSize: 28, headerColor: "#ffffff",
+  headerAlign: "center",  headerBold: true, headerItalic: false,
+  contentFont: "display", contentSize: 12, contentColor: "#ffffff",
+  contentAlign: "center", contentBold: false, contentItalic: false,
+  contentVAlign: "center",
+  bg: "violet-fuchsia",
   aspect: "aspect-3-4",
-  borderWidth: "4",
-  borderColor: "transparent",
+  borderWidth: "4", borderColor: "transparent",
   showDivider: false,
-
-  // Logo
-  logoSrc: null,
-  logoSize: 80,
-  logoX: 16,
-  logoY: 16,
+  logoSrc: null, logoSize: 60, logoX: 12, logoY: 12,
 });
 
 let cards = [defaultCard()];
 let currentIdx = 0;
+let activeSheet = null;
 
-// ─── FONT OPTIONS ─────────────────────────────────────────────────────────────
+// ─── GRADIENT DATA ─────────────────────────────────────────────────────────────
 
-const fonts = [
-  { class: "elegant", label: "Playfair", style: "font-family:'Playfair Display',serif" },
-  { class: "lora",    label: "Lora",     style: "font-family:'Lora',serif" },
-  { class: "dm",      label: "DM Serif", style: "font-family:'DM Serif Display',serif" },
-  { class: "display", label: "Inter",    style: "font-family:'Inter',sans-serif" },
-  { class: "grotesk", label: "Grotesk",  style: "font-family:'Space Grotesk',sans-serif" },
-  { class: "mono",    label: "Mono",     style: "font-family:'Roboto Mono',monospace" },
-  { class: "syne",    label: "Syne",     style: "font-family:'Syne',sans-serif" },
+const BG = [
+  { id:"violet-fuchsia", css:"linear-gradient(135deg,#7c3aed,#c026d3)" },
+  { id:"blue-cyan",      css:"linear-gradient(135deg,#2563eb,#06b6d4)" },
+  { id:"rose-orange",    css:"linear-gradient(135deg,#f43f5e,#f97316)" },
+  { id:"emerald-teal",   css:"linear-gradient(135deg,#10b981,#0d9488)" },
+  { id:"amber-rose",     css:"linear-gradient(135deg,#fbbf24,#f43f5e)" },
+  { id:"indigo-purple",  css:"linear-gradient(135deg,#4f46e5,#7e22ce)" },
+  { id:"sky-indigo",     css:"linear-gradient(135deg,#0ea5e9,#4f46e5)" },
+  { id:"pink-rose",      css:"linear-gradient(135deg,#ec4899,#f43f5e)" },
+  { id:"lime-emerald",   css:"linear-gradient(135deg,#84cc16,#059669)" },
+  { id:"fuchsia-pink",   css:"linear-gradient(135deg,#c026d3,#ec4899)" },
+  { id:"orange-amber",   css:"linear-gradient(135deg,#f97316,#f59e0b)" },
+  { id:"slate-dark",     css:"linear-gradient(135deg,#334155,#0f172a)" },
+  { id:"gray-black",     css:"linear-gradient(135deg,#1f2937,#000000)" },
+  { id:"teal-cyan",      css:"linear-gradient(135deg,#2dd4bf,#0891b2)" },
+  { id:"red-rose",       css:"linear-gradient(135deg,#dc2626,#9f1239)" },
+  { id:"yellow-orange",  css:"linear-gradient(135deg,#facc15,#ea580c)" },
+  { id:"blue-violet",    css:"linear-gradient(135deg,#3b82f6,#7c3aed)" },
+  { id:"green-lime",     css:"linear-gradient(135deg,#22c55e,#a3e635)" },
+];
+const getBgCss = id => (BG.find(b => b.id === id) || BG[0]).css;
+
+// ─── FONTS ─────────────────────────────────────────────────────────────────────
+
+const FONTS = [
+  { cls:"elegant", label:"Playfair", css:"'Playfair Display',serif" },
+  { cls:"lora",    label:"Lora",     css:"'Lora',serif" },
+  { cls:"dm",      label:"DM Serif", css:"'DM Serif Display',serif" },
+  { cls:"display", label:"Inter",    css:"'Inter',sans-serif" },
+  { cls:"grotesk", label:"Grotesk",  css:"'Space Grotesk',sans-serif" },
+  { cls:"mono",    label:"Mono",     css:"'Roboto Mono',monospace" },
+  { cls:"syne",    label:"Syne",     css:"'Syne',sans-serif" },
+];
+const getFontCss = cls => (FONTS.find(f => f.cls === cls) || FONTS[0]).css;
+
+// ─── COLORS ────────────────────────────────────────────────────────────────────
+
+const TEXT_COLORS = [
+  "#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd",
+  "#fbcfe8","#374151","#1f2937","#000000","#dc2626","#ea580c","#ca8a04",
+  "#16a34a","#2563eb","#7c3aed","#db2777","#0891b2","#0d9488",
+];
+const BORDER_COLORS = [
+  "#ffffff","#fde68a","#fca5a5","#6ee7b7","#93c5fd","#c4b5fd","#fbcfe8",
+  "#000000","#1f2937","#374151","#dc2626","#ea580c","#ca8a04","#16a34a",
+  "#2563eb","#7c3aed","#db2777","#f97316","#10b981","#06b6d4",
 ];
 
-const fontCssMap = {
-  elegant: "'Playfair Display', serif",
-  lora:    "'Lora', serif",
-  dm:      "'DM Serif Display', serif",
-  display: "'Inter', sans-serif",
-  grotesk: "'Space Grotesk', sans-serif",
-  mono:    "'Roboto Mono', monospace",
-  syne:    "'Syne', sans-serif",
+// ─── ELEMENTS ──────────────────────────────────────────────────────────────────
+
+const $ = id => document.getElementById(id);
+
+const cardPreview    = $('cardPreview');
+const bgLayer        = $('bgLayer');
+const previewTitle   = $('previewTitle');
+const previewContent = $('previewContent');
+const previewDivider = $('previewDivider');
+const contentBlock   = $('contentBlock');
+const watermarkEl    = $('watermarkEl');
+const logoOverlay    = $('logoOverlay');
+const logoImg        = $('logoImg');
+const cardCounter    = $('cardCounter');
+const dotIndicators  = $('dotIndicators');
+
+// Sheet size classes map
+const SHEET_SIZE = {
+  header: 'sheet-xl', content: 'sheet-xl',
+  bg: 'sheet-md', border: 'sheet-lg',
+  aspect: 'sheet-sm', logo: 'sheet-xl',
 };
 
-// ─── COLOR PALETTES ──────────────────────────────────────────────────────────
+// ─── SHEET MANAGEMENT ──────────────────────────────────────────────────────────
 
-const textColors = [
-  "#ffffff","#f8f4ff","#fde68a","#fca5a5","#6ee7b7",
-  "#93c5fd","#c4b5fd","#fbcfe8","#1f2937","#374151",
-  "#111827","#0f172a","#000000","#dc2626","#ea580c",
-  "#ca8a04","#16a34a","#2563eb","#7c3aed","#db2777",
-];
+function openSheet(name) {
+  // Close any open sheet
+  if (activeSheet) {
+    $(`${activeSheet}Sheet`).classList.remove('open');
+    document.body.classList.remove('sheet-sm','sheet-md','sheet-lg','sheet-xl');
+  }
+  $(`${name}Sheet`).classList.add('open');
+  document.body.classList.add(SHEET_SIZE[name]);
+  activeSheet = name;
+}
 
-const borderColors = [
-  "#ffffff","#f8fafc","#fde68a","#fca5a5","#6ee7b7",
-  "#93c5fd","#c4b5fd","#000000","#1f2937","#374151",
-  "#dc2626","#ea580c","#ca8a04","#16a34a","#2563eb",
-  "#7c3aed","#db2777","#f97316","#10b981","#06b6d4",
-];
+function closeSheet(name) {
+  $(`${name}Sheet`).classList.remove('open');
+  document.body.classList.remove('sheet-sm','sheet-md','sheet-lg','sheet-xl');
+  activeSheet = null;
+}
 
-const backgrounds = [
-  { cls: "from-violet-600 to-fuchsia-600",   from: "#7c3aed", to: "#c026d3" },
-  { cls: "from-blue-600 to-cyan-500",         from: "#2563eb", to: "#06b6d4" },
-  { cls: "from-rose-500 to-orange-500",       from: "#f43f5e", to: "#f97316" },
-  { cls: "from-emerald-500 to-teal-600",      from: "#10b981", to: "#0d9488" },
-  { cls: "from-amber-400 to-rose-500",        from: "#fbbf24", to: "#f43f5e" },
-  { cls: "from-indigo-600 to-purple-700",     from: "#4f46e5", to: "#7e22ce" },
-  { cls: "from-sky-500 to-indigo-600",        from: "#0ea5e9", to: "#4f46e5" },
-  { cls: "from-pink-500 to-rose-500",         from: "#ec4899", to: "#f43f5e" },
-  { cls: "from-lime-500 to-emerald-600",      from: "#84cc16", to: "#059669" },
-  { cls: "from-fuchsia-600 to-pink-500",      from: "#c026d3", to: "#ec4899" },
-  { cls: "from-orange-500 to-amber-500",      from: "#f97316", to: "#f59e0b" },
-  { cls: "from-slate-700 to-slate-900",       from: "#334155", to: "#0f172a" },
-  { cls: "from-gray-800 to-black",            from: "#1f2937", to: "#000000" },
-  { cls: "from-teal-400 to-cyan-600",         from: "#2dd4bf", to: "#0891b2" },
-  { cls: "from-red-600 to-rose-800",          from: "#dc2626", to: "#9f1239" },
-  { cls: "from-yellow-400 to-orange-600",     from: "#facc15", to: "#ea580c" },
-  { cls: "from-blue-500 to-violet-600",       from: "#3b82f6", to: "#7c3aed" },
-  { cls: "from-green-500 to-lime-400",        from: "#22c55e", to: "#a3e635" },
-];
+function closeAll() {
+  ['header','content','bg','border','aspect','logo'].forEach(n => {
+    $(`${n}Sheet`).classList.remove('open');
+  });
+  document.body.classList.remove('sheet-sm','sheet-md','sheet-lg','sheet-xl');
+  activeSheet = null;
+}
 
-// ─── ASPECT RATIOS ───────────────────────────────────────────────────────────
+$('closeHeader').onclick  = () => closeSheet('header');
+$('closeContent').onclick = () => closeSheet('content');
+$('closeBg').onclick      = () => closeSheet('bg');
+$('closeBorder').onclick  = () => closeSheet('border');
+$('closeAspect').onclick  = () => closeSheet('aspect');
+$('closeLogo').onclick    = () => closeSheet('logo');
 
-const aspects = [
-  { cls: "aspect-1-1",  label: "1:1",   icon: "crop_square" },
-  { cls: "aspect-3-4",  label: "3:4",   icon: "crop_portrait" },
-  { cls: "aspect-4-3",  label: "4:3",   icon: "crop_landscape" },
-  { cls: "aspect-16-9", label: "16:9",  icon: "crop_16_9" },
-  { cls: "aspect-9-16", label: "9:16",  icon: "stay_current_portrait" },
-];
+// ─── RENDER ────────────────────────────────────────────────────────────────────
 
-// ─── ELEMENTS ────────────────────────────────────────────────────────────────
-
-const cardPreview    = document.getElementById('cardPreview');
-const bgLayer        = document.getElementById('bgLayer');
-const previewTitle   = document.getElementById('previewTitle');
-const previewContent = document.getElementById('previewContent');
-const previewDivider = document.getElementById('previewDivider');
-const contentBlock   = document.getElementById('contentBlock');
-const watermarkEl    = document.getElementById('watermarkEl');
-const logoOverlay    = document.getElementById('logoOverlay');
-const logoImg        = document.getElementById('logoImg');
-const cardCounter    = document.getElementById('cardCounter');
-const dotIndicators  = document.getElementById('dotIndicators');
-const prevOverlay    = document.getElementById('prevOverlay');
-const nextOverlay    = document.getElementById('nextOverlay');
-const downloadBtn    = document.getElementById('downloadBtn');
-
-// Sheet refs
-const headerSheet  = document.getElementById('headerSheet');
-const contentSheet = document.getElementById('contentSheet');
-const logoSheet    = document.getElementById('logoSheet');
-const aspectSheet  = document.getElementById('aspectSheet');
-const borderSheet  = document.getElementById('borderSheet');
-const pickerOverlay= document.getElementById('pickerOverlay');
-
-// Inputs
-const titleInput      = document.getElementById('titleInput');
-const contentInput    = document.getElementById('contentInput');
-const watermarkInput  = document.getElementById('watermarkInput');
-const headerSizeSlider= document.getElementById('headerSizeSlider');
-const contentSizeSlider=document.getElementById('contentSizeSlider');
-const logoSizeSlider  = document.getElementById('logoSizeSlider');
-const dividerToggle   = document.getElementById('dividerToggle');
-const headerBoldBtn   = document.getElementById('headerBoldBtn');
-const headerItalicBtn = document.getElementById('headerItalicBtn');
-const contentBoldBtn  = document.getElementById('contentBoldBtn');
-const contentItalicBtn= document.getElementById('contentItalicBtn');
-const logoUploadArea  = document.getElementById('logoUploadArea');
-const logoFileInput   = document.getElementById('logoFileInput');
-const removeLogoBtn   = document.getElementById('removeLogoBtn');
-
-// ─── RENDER ──────────────────────────────────────────────────────────────────
-
-function updatePreview() {
+function render() {
   const c = cards[currentIdx];
 
-  // --- Background ---
-  bgLayer.className = `absolute inset-0 bg-gradient-to-br ${c.bg}`;
+  bgLayer.style.background = getBgCss(c.bg);
 
-  // --- Aspect ---
   cardPreview.classList.remove('aspect-1-1','aspect-3-4','aspect-4-3','aspect-16-9','aspect-9-16');
   cardPreview.classList.add(c.aspect);
 
-  // --- Border ---
-  cardPreview.style.borderWidth  = c.borderWidth === '0' ? '0' : c.borderWidth + 'px';
-  cardPreview.style.borderStyle  = 'solid';
-  cardPreview.style.borderColor  = c.borderColor;
+  cardPreview.style.borderWidth = c.borderWidth === '0' ? '0' : c.borderWidth + 'px';
+  cardPreview.style.borderStyle = 'solid';
+  cardPreview.style.borderColor = c.borderColor;
 
-  // --- Header ---
-  previewTitle.textContent   = c.title || '';
-  previewTitle.style.fontFamily   = fontCssMap[c.headerFont] || fontCssMap.elegant;
+  // Header
+  previewTitle.textContent        = c.title || '';
+  previewTitle.style.fontFamily   = getFontCss(c.headerFont);
   previewTitle.style.fontSize     = c.headerSize + 'px';
   previewTitle.style.color        = c.headerColor;
   previewTitle.style.textAlign    = c.headerAlign;
-  previewTitle.style.fontWeight   = c.headerBold ? '700' : '400';
+  previewTitle.style.fontWeight   = c.headerBold   ? '700' : '400';
   previewTitle.style.fontStyle    = c.headerItalic ? 'italic' : 'normal';
 
-  // --- Divider ---
-  previewDivider.classList.toggle('hidden', !c.showDivider);
-  if (c.headerAlign === 'left') previewDivider.style.marginLeft = '0';
-  else if (c.headerAlign === 'right') { previewDivider.style.marginLeft = 'auto'; previewDivider.style.marginRight = '0'; }
-  else { previewDivider.style.marginLeft = 'auto'; previewDivider.style.marginRight = 'auto'; }
+  previewDivider.style.display = c.showDivider ? 'block' : 'none';
 
-  // --- Content ---
-  previewContent.textContent      = c.content || '';
-  previewContent.style.fontFamily = fontCssMap[c.contentFont] || fontCssMap.display;
-  previewContent.style.fontSize   = c.contentSize + 'px';
-  previewContent.style.color      = c.contentColor;
-  previewContent.style.textAlign  = c.contentAlign;
-  previewContent.style.fontWeight = c.contentBold ? '700' : '400';
-  previewContent.style.fontStyle  = c.contentItalic ? 'italic' : 'normal';
-
-  // Vertical alignment of content block
-  contentBlock.style.alignItems = 'initial';
+  // Content
+  previewContent.textContent        = c.content || '';
+  previewContent.style.fontFamily   = getFontCss(c.contentFont);
+  previewContent.style.fontSize     = c.contentSize + 'px';
+  previewContent.style.color        = c.contentColor;
+  previewContent.style.textAlign    = c.contentAlign;
+  previewContent.style.fontWeight   = c.contentBold   ? '700' : '400';
+  previewContent.style.fontStyle    = c.contentItalic ? 'italic' : 'normal';
   contentBlock.style.justifyContent =
-    c.contentVAlign === 'top'    ? 'flex-start' :
-    c.contentVAlign === 'bottom' ? 'flex-end'   : 'center';
+    c.contentVAlign === 'top' ? 'flex-start' :
+    c.contentVAlign === 'bottom' ? 'flex-end' : 'center';
 
-  // --- Watermark ---
-  if (c.watermark) {
-    watermarkEl.textContent = c.watermark;
-    watermarkEl.classList.remove('hidden');
-  } else {
-    watermarkEl.classList.add('hidden');
-  }
+  // Watermark
+  watermarkEl.textContent    = c.watermark || '';
+  watermarkEl.style.display  = c.watermark ? 'block' : 'none';
 
-  // --- Logo ---
+  // Logo
   if (c.logoSrc) {
-    logoImg.src = c.logoSrc;
-    logoImg.style.width = c.logoSize + 'px';
-    logoOverlay.style.left = c.logoX + 'px';
-    logoOverlay.style.top  = c.logoY + 'px';
-    logoOverlay.classList.remove('hidden');
-    removeLogoBtn.style.display = 'block';
+    logoImg.src              = c.logoSrc;
+    logoImg.style.width      = c.logoSize + 'px';
+    logoOverlay.style.left   = c.logoX + 'px';
+    logoOverlay.style.top    = c.logoY + 'px';
+    logoOverlay.style.display= 'block';
+    $('removeLogoBtn').style.display = 'block';
   } else {
-    logoOverlay.classList.add('hidden');
-    removeLogoBtn.style.display = 'none';
+    logoOverlay.style.display= 'none';
+    $('removeLogoBtn').style.display = 'none';
   }
 
-  // --- Nav ---
+  // Multi-card
   const multi = cards.length > 1;
   cardPreview.classList.toggle('has-multiple', multi);
-  if (multi) {
-    cardCounter.classList.remove('hidden');
-    cardCounter.textContent = `${currentIdx + 1} / ${cards.length}`;
-    dotIndicators.classList.remove('hidden');
-  } else {
-    cardCounter.classList.add('hidden');
-    dotIndicators.classList.add('hidden');
-  }
-  prevOverlay.disabled = currentIdx === 0;
-  nextOverlay.disabled = currentIdx === cards.length - 1;
-
-  updateDots();
+  cardCounter.style.display = multi ? 'block' : 'none';
+  if (multi) cardCounter.textContent = `${currentIdx+1}/${cards.length}`;
+  dotIndicators.style.display = multi ? 'flex' : 'none';
+  $('prevOverlay').disabled = currentIdx === 0;
+  $('nextOverlay').disabled = currentIdx === cards.length - 1;
+  renderDots();
 }
 
-function updateDots() {
+function renderDots() {
   dotIndicators.innerHTML = '';
   cards.forEach((_, i) => {
     const d = document.createElement('div');
-    d.style.cssText = `width:${i===currentIdx?'20px':'8px'};height:8px;border-radius:4px;background:${i===currentIdx?'var(--primary)':'#c7d2fe'};transition:all 0.25s;`;
-    d.style.cursor = 'pointer';
-    d.addEventListener('click', () => { currentIdx = i; updatePreview(); });
+    const active = i === currentIdx;
+    d.style.cssText = `width:${active?'17px':'6px'};height:6px;border-radius:4px;background:${active?'var(--primary)':'#c7d2fe'};transition:all 0.22s;cursor:pointer;`;
+    d.onclick = () => { currentIdx = i; render(); };
     dotIndicators.appendChild(d);
   });
 }
 
-// ─── BUILD FONT ROWS ─────────────────────────────────────────────────────────
+// ─── BUILD HELPERS ─────────────────────────────────────────────────────────────
 
-function buildFontRow(containerId, currentFont, onSelect) {
-  const row = document.getElementById(containerId);
-  row.innerHTML = '';
-  fonts.forEach(f => {
-    const btn = document.createElement('button');
-    btn.className = 'font-pill' + (f.class === currentFont ? ' active' : '');
-    btn.textContent = f.label;
-    btn.style.cssText = f.style;
-    btn.addEventListener('click', () => {
-      onSelect(f.class);
-      row.querySelectorAll('.font-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      updatePreview();
-    });
-    row.appendChild(btn);
+function buildFontRow(cid, current, onPick) {
+  const row = $(cid); row.innerHTML = '';
+  FONTS.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'font-pill' + (f.cls === current ? ' active' : '');
+    b.textContent = f.label;
+    b.style.fontFamily = f.css;
+    b.onclick = () => {
+      onPick(f.cls);
+      row.querySelectorAll('.font-pill').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    };
+    row.appendChild(b);
   });
 }
 
-// ─── BUILD COLOR ROWS ────────────────────────────────────────────────────────
-
-function buildColorRow(containerId, palette, currentColor, onSelect) {
-  const row = document.getElementById(containerId);
-  row.innerHTML = '';
+function buildColors(cid, palette, current, onPick) {
+  const row = $(cid); row.innerHTML = '';
   palette.forEach(col => {
     const sw = document.createElement('button');
-    sw.className = 'swatch' + (col === currentColor ? ' selected' : '');
+    sw.className = 'swatch' + (col === current ? ' sel' : '');
     sw.style.background = col;
-    if (col === '#ffffff' || col === '#f8f4ff' || col === '#fde68a') {
-      sw.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.12)';
-    }
-    sw.addEventListener('click', () => {
-      onSelect(col);
-      row.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
-      sw.classList.add('selected');
-      updatePreview();
-    });
+    if (['#ffffff','#f8f4ff','#fde68a','#f8fafc','#fbcfe8'].includes(col))
+      sw.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.14)';
+    sw.onclick = () => {
+      onPick(col);
+      row.querySelectorAll('.swatch').forEach(x => x.classList.remove('sel'));
+      sw.classList.add('sel');
+      render();
+    };
     row.appendChild(sw);
   });
 }
 
-// ─── BUILD BG PICKER ─────────────────────────────────────────────────────────
-
-function buildBgPicker() {
-  const row = document.getElementById('bgPickerRow');
-  row.innerHTML = '';
+function buildBg() {
+  const row = $('bgPickerRow'); row.innerHTML = '';
   const c = cards[currentIdx];
-  backgrounds.forEach(bg => {
-    const pill = document.createElement('button');
-    pill.className = 'bg-pill' + (bg.cls === c.bg ? ' selected' : '');
-    pill.style.background = `linear-gradient(135deg, ${bg.from}, ${bg.to})`;
-    pill.addEventListener('click', () => {
-      cards[currentIdx].bg = bg.cls;
-      row.querySelectorAll('.bg-pill').forEach(p => p.classList.remove('selected'));
-      pill.classList.add('selected');
-      updatePreview();
-    });
-    row.appendChild(pill);
+  BG.forEach(bg => {
+    const p = document.createElement('button');
+    p.className = 'bg-pill' + (bg.id === c.bg ? ' sel' : '');
+    p.style.background = bg.css;
+    p.onclick = () => {
+      cards[currentIdx].bg = bg.id;
+      row.querySelectorAll('.bg-pill').forEach(x => x.classList.remove('sel'));
+      p.classList.add('sel');
+      render();
+    };
+    row.appendChild(p);
   });
 }
 
-// ─── BUILD ASPECT ROW ────────────────────────────────────────────────────────
-
-function buildAspectRow() {
-  const row = document.getElementById('aspectRow');
-  row.innerHTML = '';
-  const c = cards[currentIdx];
-  aspects.forEach(a => {
-    const btn = document.createElement('button');
-    btn.className = 'icon-btn' + (a.cls === c.aspect ? ' active' : '');
-    btn.innerHTML = `<span class="material-symbols-outlined">${a.icon}</span><span>${a.label}</span>`;
-    btn.addEventListener('click', () => {
-      cards[currentIdx].aspect = a.cls;
-      closeSheet(aspectSheet);
-      updatePreview();
-    });
-    row.appendChild(btn);
+function buildAspect() {
+  const ASPECTS = [
+    { cls:"aspect-1-1",  label:"1:1",  icon:"crop_square" },
+    { cls:"aspect-3-4",  label:"3:4",  icon:"crop_portrait" },
+    { cls:"aspect-4-3",  label:"4:3",  icon:"crop_landscape" },
+    { cls:"aspect-16-9", label:"16:9", icon:"crop_16_9" },
+    { cls:"aspect-9-16", label:"9:16", icon:"stay_current_portrait" },
+  ];
+  const row = $('aspectRow'); row.innerHTML = '';
+  ASPECTS.forEach(a => {
+    const b = document.createElement('button');
+    b.className = 'ibtn' + (a.cls === cards[currentIdx].aspect ? ' active' : '');
+    b.innerHTML = `<span class="material-symbols-outlined">${a.icon}</span><span>${a.label}</span>`;
+    b.onclick = () => { cards[currentIdx].aspect = a.cls; closeSheet('aspect'); render(); };
+    row.appendChild(b);
   });
 }
 
-// ─── BUILD BORDER ROWS ───────────────────────────────────────────────────────
-
-function buildBorderRows() {
+function buildBorder() {
   const c = cards[currentIdx];
-
-  const widthRow = document.getElementById('borderWidthRow');
-  widthRow.innerHTML = '';
-  [['0','None'],['4','Thin'],['8','Medium'],['16','Thick']].forEach(([w, label]) => {
-    const btn = document.createElement('button');
-    btn.className = 'icon-btn' + (c.borderWidth === w ? ' active' : '');
-    btn.innerHTML = `<span style="font-size:11px;">${label}</span>`;
-    btn.addEventListener('click', () => {
+  const wr = $('borderWidthRow'); wr.innerHTML = '';
+  [['0','None'],['4','Thin'],['8','Med'],['14','Thick']].forEach(([w, lbl]) => {
+    const b = document.createElement('button');
+    b.className = 'ibtn' + (c.borderWidth === w ? ' active' : '');
+    b.innerHTML = `<span style="font-size:10px;">${lbl}</span>`;
+    b.onclick = () => {
       cards[currentIdx].borderWidth = w;
-      widthRow.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      updatePreview();
-    });
-    widthRow.appendChild(btn);
+      wr.querySelectorAll('.ibtn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    };
+    wr.appendChild(b);
   });
-
-  buildColorRow('borderColorRow', borderColors, c.borderColor, col => {
+  buildColors('borderColorRow', BORDER_COLORS, c.borderColor, col => {
     cards[currentIdx].borderColor = col;
   });
 }
 
-// ─── SHEETS ──────────────────────────────────────────────────────────────────
-
-function openSheet(el) { el.classList.add('open'); }
-function closeSheet(el) { el.classList.remove('open'); }
-
-// Close sheets on backdrop click
-[headerSheet, contentSheet, logoSheet, aspectSheet, borderSheet].forEach(s => {
-  s.addEventListener('click', e => { if (e.target === s) closeSheet(s); });
-});
-
-document.getElementById('closeHeader').addEventListener('click', () => closeSheet(headerSheet));
-document.getElementById('closeContent').addEventListener('click', () => closeSheet(contentSheet));
-document.getElementById('closeLogo').addEventListener('click', () => closeSheet(logoSheet));
-
-pickerOverlay.addEventListener('click', e => {
-  if (e.target === pickerOverlay) pickerOverlay.classList.remove('open');
-});
-
-// ─── TOOLBAR ACTIONS ─────────────────────────────────────────────────────────
+// ─── TOOLBAR ───────────────────────────────────────────────────────────────────
 
 document.querySelectorAll('[data-action]').forEach(btn => {
   btn.addEventListener('click', () => {
-    const action = btn.dataset.action;
+    const a = btn.dataset.action;
     const c = cards[currentIdx];
 
-    if (action === 'editHeader') {
-      titleInput.value = c.title;
-      headerSizeSlider.value = c.headerSize;
-      dividerToggle.checked = c.showDivider;
-      headerBoldBtn.classList.toggle('active', c.headerBold);
-      headerItalicBtn.classList.toggle('active', c.headerItalic);
+    if (a === 'editHeader') {
+      $('titleInput').value = c.title;
+      $('headerSizeSlider').value = c.headerSize;
+      $('dividerToggle').checked = c.showDivider;
+      $('headerBoldBtn').classList.toggle('active', c.headerBold);
+      $('headerItalicBtn').classList.toggle('active', c.headerItalic);
       document.querySelectorAll('[data-align-header]').forEach(b =>
         b.classList.toggle('active', b.dataset.alignHeader === c.headerAlign));
       buildFontRow('headerFontRow', c.headerFont, f => { cards[currentIdx].headerFont = f; });
-      buildColorRow('headerColorRow', textColors, c.headerColor, col => { cards[currentIdx].headerColor = col; });
-      openSheet(headerSheet);
+      buildColors('headerColorRow', TEXT_COLORS, c.headerColor, col => { cards[currentIdx].headerColor = col; });
+      openSheet('header');
     }
-
-    else if (action === 'editContent') {
-      contentInput.value = c.content;
-      watermarkInput.value = c.watermark;
-      contentSizeSlider.value = c.contentSize;
-      contentBoldBtn.classList.toggle('active', c.contentBold);
-      contentItalicBtn.classList.toggle('active', c.contentItalic);
+    else if (a === 'editContent') {
+      $('contentInput').value = c.content;
+      $('watermarkInput').value = c.watermark;
+      $('contentSizeSlider').value = c.contentSize;
+      $('contentBoldBtn').classList.toggle('active', c.contentBold);
+      $('contentItalicBtn').classList.toggle('active', c.contentItalic);
       document.querySelectorAll('[data-align-content]').forEach(b =>
         b.classList.toggle('active', b.dataset.alignContent === c.contentAlign));
       document.querySelectorAll('[data-valign]').forEach(b =>
         b.classList.toggle('active', b.dataset.valign === c.contentVAlign));
       buildFontRow('contentFontRow', c.contentFont, f => { cards[currentIdx].contentFont = f; });
-      buildColorRow('contentColorRow', textColors, c.contentColor, col => { cards[currentIdx].contentColor = col; });
-      openSheet(contentSheet);
+      buildColors('contentColorRow', TEXT_COLORS, c.contentColor, col => { cards[currentIdx].contentColor = col; });
+      openSheet('content');
     }
-
-    else if (action === 'bgColor') {
-      buildBgPicker();
-      pickerOverlay.classList.add('open');
+    else if (a === 'bgColor')  { buildBg();      openSheet('bg'); }
+    else if (a === 'border')   { buildBorder();   openSheet('border'); }
+    else if (a === 'aspect')   { buildAspect();   openSheet('aspect'); }
+    else if (a === 'logo') {
+      $('logoSizeSlider').value = c.logoSize || 60;
+      openSheet('logo');
     }
-
-    else if (action === 'border') {
-      buildBorderRows();
-      openSheet(borderSheet);
-    }
-
-    else if (action === 'logo') {
-      logoSizeSlider.value = c.logoSize || 80;
-      openSheet(logoSheet);
-    }
-
-    else if (action === 'aspect') {
-      buildAspectRow();
-      openSheet(aspectSheet);
-    }
-
-    else if (action === 'addCard') {
-      const newCard = defaultCard();
-      // Inherit style from current
-      newCard.bg = c.bg;
-      newCard.aspect = c.aspect;
-      newCard.headerFont = c.headerFont;
-      newCard.headerColor = c.headerColor;
-      newCard.contentFont = c.contentFont;
-      newCard.contentColor = c.contentColor;
-      newCard.borderWidth = c.borderWidth;
-      newCard.borderColor = c.borderColor;
-      newCard.title = '';
-      newCard.content = '';
-      cards.push(newCard);
+    else if (a === 'addCard') {
+      const n = defaultCard();
+      Object.assign(n, {
+        bg: c.bg, aspect: c.aspect,
+        headerFont: c.headerFont, headerColor: c.headerColor,
+        contentFont: c.contentFont, contentColor: c.contentColor,
+        borderWidth: c.borderWidth, borderColor: c.borderColor,
+        title: '', content: '',
+      });
+      cards.push(n);
       currentIdx = cards.length - 1;
-      updatePreview();
+      closeAll();
+      render();
     }
   });
 });
 
-// ─── HEADER SHEET LIVE INPUTS ────────────────────────────────────────────────
+// ─── LIVE INPUTS ───────────────────────────────────────────────────────────────
 
-titleInput.addEventListener('input', () => {
-  cards[currentIdx].title = titleInput.value;
-  updatePreview();
+$('titleInput').oninput    = e => { cards[currentIdx].title     = e.target.value; render(); };
+$('contentInput').oninput  = e => { cards[currentIdx].content   = e.target.value; render(); };
+$('watermarkInput').oninput= e => { cards[currentIdx].watermark = e.target.value; render(); };
+
+$('headerSizeSlider').oninput  = e => { cards[currentIdx].headerSize  = +e.target.value; render(); };
+$('contentSizeSlider').oninput = e => { cards[currentIdx].contentSize = +e.target.value; render(); };
+
+$('dividerToggle').onchange = e => { cards[currentIdx].showDivider = e.target.checked; render(); };
+
+const toggle = (id, key) => {
+  $(id).onclick = () => {
+    cards[currentIdx][key] = !cards[currentIdx][key];
+    $(id).classList.toggle('active', cards[currentIdx][key]);
+    render();
+  };
+};
+toggle('headerBoldBtn',    'headerBold');
+toggle('headerItalicBtn',  'headerItalic');
+toggle('contentBoldBtn',   'contentBold');
+toggle('contentItalicBtn', 'contentItalic');
+
+document.querySelectorAll('[data-align-header]').forEach(b => {
+  b.onclick = () => {
+    cards[currentIdx].headerAlign = b.dataset.alignHeader;
+    document.querySelectorAll('[data-align-header]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); render();
+  };
+});
+document.querySelectorAll('[data-align-content]').forEach(b => {
+  b.onclick = () => {
+    cards[currentIdx].contentAlign = b.dataset.alignContent;
+    document.querySelectorAll('[data-align-content]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); render();
+  };
+});
+document.querySelectorAll('[data-valign]').forEach(b => {
+  b.onclick = () => {
+    cards[currentIdx].contentVAlign = b.dataset.valign;
+    document.querySelectorAll('[data-valign]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); render();
+  };
 });
 
-headerSizeSlider.addEventListener('input', () => {
-  cards[currentIdx].headerSize = parseInt(headerSizeSlider.value);
-  updatePreview();
-});
+// ─── LOGO ──────────────────────────────────────────────────────────────────────
 
-dividerToggle.addEventListener('change', () => {
-  cards[currentIdx].showDivider = dividerToggle.checked;
-  updatePreview();
-});
-
-headerBoldBtn.addEventListener('click', () => {
-  cards[currentIdx].headerBold = !cards[currentIdx].headerBold;
-  headerBoldBtn.classList.toggle('active', cards[currentIdx].headerBold);
-  updatePreview();
-});
-
-headerItalicBtn.addEventListener('click', () => {
-  cards[currentIdx].headerItalic = !cards[currentIdx].headerItalic;
-  headerItalicBtn.classList.toggle('active', cards[currentIdx].headerItalic);
-  updatePreview();
-});
-
-document.querySelectorAll('[data-align-header]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    cards[currentIdx].headerAlign = btn.dataset.alignHeader;
-    document.querySelectorAll('[data-align-header]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    updatePreview();
-  });
-});
-
-// ─── CONTENT SHEET LIVE INPUTS ───────────────────────────────────────────────
-
-contentInput.addEventListener('input', () => {
-  cards[currentIdx].content = contentInput.value;
-  updatePreview();
-});
-
-watermarkInput.addEventListener('input', () => {
-  cards[currentIdx].watermark = watermarkInput.value;
-  updatePreview();
-});
-
-contentSizeSlider.addEventListener('input', () => {
-  cards[currentIdx].contentSize = parseInt(contentSizeSlider.value);
-  updatePreview();
-});
-
-contentBoldBtn.addEventListener('click', () => {
-  cards[currentIdx].contentBold = !cards[currentIdx].contentBold;
-  contentBoldBtn.classList.toggle('active', cards[currentIdx].contentBold);
-  updatePreview();
-});
-
-contentItalicBtn.addEventListener('click', () => {
-  cards[currentIdx].contentItalic = !cards[currentIdx].contentItalic;
-  contentItalicBtn.classList.toggle('active', cards[currentIdx].contentItalic);
-  updatePreview();
-});
-
-document.querySelectorAll('[data-align-content]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    cards[currentIdx].contentAlign = btn.dataset.alignContent;
-    document.querySelectorAll('[data-align-content]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    updatePreview();
-  });
-});
-
-document.querySelectorAll('[data-valign]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    cards[currentIdx].contentVAlign = btn.dataset.valign;
-    document.querySelectorAll('[data-valign]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    updatePreview();
-  });
-});
-
-// ─── LOGO UPLOAD ─────────────────────────────────────────────────────────────
-
-logoUploadArea.addEventListener('click', () => logoFileInput.click());
-logoUploadArea.addEventListener('dragover', e => {
-  e.preventDefault();
-  logoUploadArea.style.borderColor = 'var(--primary)';
-});
-logoUploadArea.addEventListener('dragleave', () => {
-  logoUploadArea.style.borderColor = 'var(--border)';
-});
-logoUploadArea.addEventListener('drop', e => {
-  e.preventDefault();
-  logoUploadArea.style.borderColor = 'var(--border)';
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) loadLogo(file);
-});
-
-logoFileInput.addEventListener('change', () => {
-  if (logoFileInput.files[0]) loadLogo(logoFileInput.files[0]);
-});
+$('logoUploadArea').onclick = () => $('logoFileInput').click();
+$('logoFileInput').onchange = () => {
+  if ($('logoFileInput').files[0]) loadLogo($('logoFileInput').files[0]);
+};
 
 function loadLogo(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    cards[currentIdx].logoSrc  = e.target.result;
-    cards[currentIdx].logoSize = 80;
-    cards[currentIdx].logoX    = 16;
-    cards[currentIdx].logoY    = 16;
-    updatePreview();
-    closeSheet(logoSheet);
+    Object.assign(cards[currentIdx], { logoSrc: e.target.result, logoSize: 60, logoX: 12, logoY: 12 });
+    render(); closeSheet('logo');
   };
   reader.readAsDataURL(file);
 }
 
-logoSizeSlider.addEventListener('input', () => {
-  cards[currentIdx].logoSize = parseInt(logoSizeSlider.value);
-  updatePreview();
-});
+$('logoSizeSlider').oninput = e => { cards[currentIdx].logoSize = +e.target.value; render(); };
+$('removeLogoBtn').onclick  = () => { cards[currentIdx].logoSrc = null; render(); };
 
-removeLogoBtn.addEventListener('click', () => {
-  cards[currentIdx].logoSrc = null;
-  updatePreview();
-});
-
-// ─── LOGO POSITION PRESETS ───────────────────────────────────────────────────
-
+// Position presets
 document.querySelectorAll('[data-pos]').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.onclick = () => {
     const c = cards[currentIdx];
-    const rect = cardPreview.getBoundingClientRect();
-    const logoW = c.logoSize || 80;
-    const logoH = logoImg.naturalHeight
-      ? (logoW / logoImg.naturalWidth) * logoImg.naturalHeight
-      : logoW;
-    const pad = 14;
-
-    const positions = {
-      'top-left':    { x: pad,                            y: pad },
-      'top-center':  { x: (rect.width - logoW) / 2,       y: pad },
-      'top-right':   { x: rect.width - logoW - pad,        y: pad },
-      'mid-left':    { x: pad,                            y: (rect.height - logoH) / 2 },
-      'mid-center':  { x: (rect.width - logoW) / 2,       y: (rect.height - logoH) / 2 },
-      'mid-right':   { x: rect.width - logoW - pad,        y: (rect.height - logoH) / 2 },
-      'bot-left':    { x: pad,                            y: rect.height - logoH - pad },
-      'bot-center':  { x: (rect.width - logoW) / 2,       y: rect.height - logoH - pad },
-      'bot-right':   { x: rect.width - logoW - pad,        y: rect.height - logoH - pad },
-    };
-
-    const pos = positions[btn.dataset.pos];
-    if (pos) {
-      cards[currentIdx].logoX = Math.max(0, pos.x);
-      cards[currentIdx].logoY = Math.max(0, pos.y);
-      updatePreview();
+    const W = cardPreview.offsetWidth, H = cardPreview.offsetHeight;
+    const lw = c.logoSize || 60;
+    const lh = logoImg.naturalHeight ? (lw / logoImg.naturalWidth) * logoImg.naturalHeight : lw;
+    const p = 10;
+    const POS = {
+      'top-left':   {x:p, y:p},        'top-center': {x:(W-lw)/2, y:p},       'top-right': {x:W-lw-p, y:p},
+      'mid-left':   {x:p, y:(H-lh)/2}, 'mid-center': {x:(W-lw)/2, y:(H-lh)/2},'mid-right': {x:W-lw-p, y:(H-lh)/2},
+      'bot-left':   {x:p, y:H-lh-p},   'bot-center': {x:(W-lw)/2, y:H-lh-p},  'bot-right': {x:W-lw-p, y:H-lh-p},
+    }[btn.dataset.pos];
+    if (POS) {
+      cards[currentIdx].logoX = Math.max(0, POS.x);
+      cards[currentIdx].logoY = Math.max(0, POS.y);
+      render();
     }
-  });
+  };
 });
 
-// ─── LOGO DRAG ───────────────────────────────────────────────────────────────
-
-(function setupLogoDrag() {
-  let dragging = false, startX, startY, origX, origY;
-
-  function onPointerDown(e) {
-    if (e.target === document.getElementById('logoResizeHandle')) return;
-    e.preventDefault();
-    dragging = true;
-    startX = e.clientX ?? e.touches[0].clientX;
-    startY = e.clientY ?? e.touches[0].clientY;
-    origX  = cards[currentIdx].logoX;
-    origY  = cards[currentIdx].logoY;
-    logoOverlay.style.cursor = 'grabbing';
-  }
-
-  function onPointerMove(e) {
-    if (!dragging) return;
-    e.preventDefault();
-    const cx = e.clientX ?? e.touches[0].clientX;
-    const cy = e.clientY ?? e.touches[0].clientY;
+// Logo drag
+(function() {
+  let drag=false, sx, sy, ox, oy;
+  const start = e => {
+    if (e.target.id==='logoResizeHandle') return;
+    e.preventDefault(); drag=true;
+    const pt = e.touches ? e.touches[0] : e;
+    sx=pt.clientX; sy=pt.clientY;
+    ox=cards[currentIdx].logoX; oy=cards[currentIdx].logoY;
+  };
+  const move = e => {
+    if (!drag) return; e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
     const rect = cardPreview.getBoundingClientRect();
-    const scaleX = cardPreview.offsetWidth  / rect.width;
-    const scaleY = cardPreview.offsetHeight / rect.height;
-    const dx = (cx - startX) * scaleX;
-    const dy = (cy - startY) * scaleY;
-    const newX = Math.max(0, Math.min(origX + dx, cardPreview.offsetWidth  - (cards[currentIdx].logoSize || 80)));
-    const newY = Math.max(0, Math.min(origY + dy, cardPreview.offsetHeight - 40));
-    cards[currentIdx].logoX = newX;
-    cards[currentIdx].logoY = newY;
-    logoOverlay.style.left = newX + 'px';
-    logoOverlay.style.top  = newY + 'px';
-  }
-
-  function onPointerUp() {
-    dragging = false;
-    logoOverlay.style.cursor = 'grab';
-  }
-
-  logoOverlay.addEventListener('mousedown',  onPointerDown);
-  logoOverlay.addEventListener('touchstart', onPointerDown, { passive: false });
-  document.addEventListener('mousemove',  onPointerMove);
-  document.addEventListener('touchmove',  onPointerMove, { passive: false });
-  document.addEventListener('mouseup',    onPointerUp);
-  document.addEventListener('touchend',   onPointerUp);
+    const scX = cardPreview.offsetWidth/rect.width;
+    const scY = cardPreview.offsetHeight/rect.height;
+    const lw = cards[currentIdx].logoSize || 60;
+    const nx = Math.max(0, Math.min(ox+(pt.clientX-sx)*scX, cardPreview.offsetWidth-lw));
+    const ny = Math.max(0, Math.min(oy+(pt.clientY-sy)*scY, cardPreview.offsetHeight-24));
+    cards[currentIdx].logoX = nx; cards[currentIdx].logoY = ny;
+    logoOverlay.style.left = nx+'px'; logoOverlay.style.top = ny+'px';
+  };
+  const end = () => { drag=false; };
+  logoOverlay.addEventListener('mousedown', start);
+  logoOverlay.addEventListener('touchstart', start, {passive:false});
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, {passive:false});
+  document.addEventListener('mouseup', end);
+  document.addEventListener('touchend', end);
 })();
 
-// ─── LOGO RESIZE HANDLE ──────────────────────────────────────────────────────
-
-(function setupLogoResize() {
-  let resizing = false, startX, startSize;
-  const handle = document.getElementById('logoResizeHandle');
-
-  handle.addEventListener('mousedown', e => {
-    e.stopPropagation();
-    resizing = true;
-    startX = e.clientX;
-    startSize = cards[currentIdx].logoSize || 80;
-  });
-
+// Logo resize
+(function() {
+  let r=false, sx, ss;
+  const h = $('logoResizeHandle');
+  h.addEventListener('mousedown', e => { e.stopPropagation(); r=true; sx=e.clientX; ss=cards[currentIdx].logoSize||60; });
   document.addEventListener('mousemove', e => {
-    if (!resizing) return;
-    const delta = e.clientX - startX;
-    const newSize = Math.max(24, Math.min(startSize + delta, 280));
-    cards[currentIdx].logoSize = newSize;
-    logoImg.style.width = newSize + 'px';
-    logoSizeSlider.value = newSize;
+    if (!r) return;
+    const ns = Math.max(20, Math.min(ss+(e.clientX-sx), 240));
+    cards[currentIdx].logoSize = ns;
+    logoImg.style.width = ns+'px';
+    $('logoSizeSlider').value = ns;
   });
-
-  document.addEventListener('mouseup', () => { resizing = false; });
+  document.addEventListener('mouseup', () => { r=false; });
 })();
 
-// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+// ─── NAVIGATION ────────────────────────────────────────────────────────────────
 
-prevOverlay.addEventListener('click', () => {
-  if (currentIdx > 0) { currentIdx--; updatePreview(); }
-});
-nextOverlay.addEventListener('click', () => {
-  if (currentIdx < cards.length - 1) { currentIdx++; updatePreview(); }
-});
-
-// ─── DOWNLOAD ────────────────────────────────────────────────────────────────
-
-downloadBtn.addEventListener('click', () => {
-  // Hide UI chrome
-  const hide = [downloadBtn, prevOverlay, nextOverlay, cardCounter];
-  hide.forEach(el => el.style.visibility = 'hidden');
-
-  html2canvas(cardPreview, {
-    scale: 3,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: null,
-    logging: false,
-  }).then(canvas => {
-    canvas.toBlob(blob => {
-      const link = document.createElement('a');
-      link.download = (cards[currentIdx].title || 'flashcard') + '.png';
-      link.href = URL.createObjectURL(blob);
-      link.click();
-      hide.forEach(el => el.style.visibility = '');
-    }, 'image/png');
-  });
-});
-
-// ─── KEYBOARD NAV ────────────────────────────────────────────────────────────
+$('prevOverlay').onclick = () => { if (currentIdx>0) { currentIdx--; render(); } };
+$('nextOverlay').onclick = () => { if (currentIdx<cards.length-1) { currentIdx++; render(); } };
 
 document.addEventListener('keydown', e => {
-  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-  if (e.key === 'ArrowLeft'  && currentIdx > 0)                { currentIdx--; updatePreview(); }
-  if (e.key === 'ArrowRight' && currentIdx < cards.length - 1) { currentIdx++; updatePreview(); }
+  const tag = document.activeElement.tagName;
+  if (tag==='INPUT' || tag==='TEXTAREA') return;
+  if (e.key==='ArrowLeft'  && currentIdx>0)               { currentIdx--; render(); }
+  if (e.key==='ArrowRight' && currentIdx<cards.length-1)  { currentIdx++; render(); }
+  if (e.key==='Escape') closeAll();
 });
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ─── DOWNLOAD ──────────────────────────────────────────────────────────────────
 
-updatePreview();
+$('downloadBtn').addEventListener('click', () => {
+  const hide = [$('downloadBtn'), $('prevOverlay'), $('nextOverlay'), cardCounter];
+  hide.forEach(el => el.style.visibility = 'hidden');
+  html2canvas(cardPreview, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false })
+    .then(canvas => {
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.download = (cards[currentIdx].title || 'flashcard') + '.png';
+        a.href = URL.createObjectURL(blob);
+        a.click();
+        hide.forEach(el => el.style.visibility = '');
+      }, 'image/png');
+    });
+});
 
+// ─── INIT ──────────────────────────────────────────────────────────────────────
+render();
 </script>
 </body>
 </html>
